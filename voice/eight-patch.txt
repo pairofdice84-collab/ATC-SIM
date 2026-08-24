@@ -1,0 +1,5 @@
+Eight. <break time="1.5s" />
+Eight. <break time="1.5s" />
+Eight, eight. <break time="1.5s" />
+Number eight. <break time="1.5s" />
+Eight thousand. <break time="1.5s" />

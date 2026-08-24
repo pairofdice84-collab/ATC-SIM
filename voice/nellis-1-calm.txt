@@ -1,0 +1,7 @@
+Nellis Control. We have your hijack code. Stand by. <break time="1.5s" />
+Viper flight, cleared to intercept. Vectors on you now. <break time="1.5s" />
+Target squawking seven five zero zero. NORDO. Deviating from course. <break time="1.5s" />
+Viper Zero One, tally the target. Closing. <break time="1.5s" />
+Viper Zero One is visual. Cockpit unresponsive. <break time="1.5s" />
+Nellis has the track. Viper flight in the block, shadowing. <break time="1.5s" />
+Approach, work your traffic. We have this one. <break time="1.5s" />

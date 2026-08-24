@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APPROACH — Radar Scope v2.0 (two airports)</title>
+<style>
+  :root{
+    --bg:#05090c;--scope:#071014;--phosphor:#25e08a;--phosphor-dim:#0f5c3d;
+    --tag:#c8ffe6;--caution:#ffce4d;--conflict:#ff4d4d;--ui:#6f8a86;
+    --field:#7db8ff;--mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--tag);
+    font-family:var(--mono);overflow:hidden;-webkit-font-smoothing:antialiased}
+  #scope{display:block;background:
+    radial-gradient(circle at 50% 45%,#0a1a18 0%,var(--scope) 55%,#030608 100%)}
+  #hud{position:fixed;top:0;left:0;right:0;display:flex;gap:20px;align-items:center;
+    padding:10px 16px;font-size:12px;letter-spacing:.08em;color:var(--ui);
+    background:linear-gradient(#05090ccc,#05090c00);pointer-events:none;z-index:5;flex-wrap:wrap}
+  #hud b{color:var(--phosphor);font-weight:600}
+  #hud .fld{color:var(--field)}
+  .brand{color:var(--tag);font-weight:600;letter-spacing:.22em;margin-right:8px}
+  #ctl{position:fixed;bottom:0;left:0;right:0;display:flex;gap:8px;align-items:center;
+    padding:12px 16px;background:linear-gradient(#05090c00,#05090cee);z-index:5;flex-wrap:wrap}
+  button{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--tag);
+    background:#0c1a18;border:1px solid var(--phosphor-dim);border-radius:6px;
+    padding:7px 11px;cursor:pointer;transition:.12s}
+  button:hover{border-color:var(--phosphor);color:var(--phosphor)}
+  button.on{background:var(--phosphor);color:#04120c;border-color:var(--phosphor)}
+  button:focus-visible{outline:2px solid var(--phosphor);outline-offset:2px}
+  .sp{flex:1}.hint{color:var(--ui);font-size:11px}
+  #cmd{position:fixed;left:16px;bottom:60px;width:230px;padding:12px;z-index:6;
+    background:#081513f2;border:1px solid var(--phosphor-dim);border-radius:8px;display:none}
+  #cmd h4{margin:0 0 8px;color:var(--phosphor);font-size:13px;letter-spacing:.1em}
+  #cmd .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  #cmd button{width:100%;font-size:11px;padding:8px 6px}#cmd .full{grid-column:1/3}
+  #log{position:fixed;right:16px;bottom:60px;width:270px;max-height:34vh;overflow:auto;
+    z-index:6;padding:10px 12px;background:#06100ee6;border:1px solid #0f3527;border-radius:8px;
+    font-size:11.5px;line-height:1.6}
+  #log .atc{color:#8fb7ff}#log .plt{color:#c8ffe6}#log .sys{color:var(--ui)}
+  #log .mil{color:#ff8a5c;font-weight:600}
+  #log .t{color:#3f5f58;margin-right:6px}
+  #sel{position:fixed;top:52px;right:16px;width:190px;padding:12px 14px;z-index:5;
+    background:#081513ee;border:1px solid var(--phosphor-dim);border-radius:8px;
+    font-size:12px;line-height:1.7;display:none}
+  #sel h4{margin:0 0 6px;color:var(--phosphor);font-size:13px;letter-spacing:.1em}
+  #sel .row{display:flex;justify-content:space-between}#sel .row span:first-child{color:var(--ui)}
+  #mic{position:fixed;top:54px;left:50%;transform:translateX(-50%);z-index:8;
+    display:none;align-items:center;gap:8px;padding:8px 18px;border-radius:20px;
+    background:#ff4d4d1f;border:1px solid var(--conflict);color:var(--conflict);
+    font-size:12px;letter-spacing:.1em;animation:micpulse 1s ease-in-out infinite}
+  @keyframes micpulse{0%,100%{opacity:1}50%{opacity:.45}}
+  #help-panel{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:9;
+    width:340px;max-height:72vh;overflow:auto;padding:16px 20px;display:none;
+    background:#081513f7;border:1px solid var(--phosphor-dim);border-radius:10px;
+    font-size:12px;line-height:1.7}
+  #help-panel h4{margin:16px 0 6px;color:var(--phosphor);font-size:12px;letter-spacing:.12em}
+  #help-panel h4:first-child{margin-top:0}
+  #help-panel .row{display:flex;justify-content:space-between;gap:14px}
+  #help-panel .row span:first-child{color:var(--tag);white-space:nowrap}
+  #help-panel .row span:last-child{color:var(--ui);text-align:right}
+  #help-panel .ex{color:var(--field);font-style:italic}
+  #help-panel .note{color:var(--ui);font-size:11px;margin-top:4px}
+  #help-close{position:absolute;top:10px;right:12px;cursor:pointer;color:var(--ui);
+    background:none;border:none;font-size:14px;padding:2px 6px}
+  #help-close:hover{color:var(--phosphor)}
+  #req-panel{position:fixed;top:52px;left:16px;width:210px;max-height:52vh;overflow:auto;
+    z-index:6;padding:10px 12px;background:#0a1410ee;border:1px solid var(--phosphor-dim);
+    border-radius:8px;font-size:11.5px}
+  #req-panel h4{margin:0 0 8px;color:var(--phosphor);font-size:12px;letter-spacing:.1em}
+  .req{margin-bottom:7px;padding:6px 8px;border-radius:5px;background:#0e1f19;
+    border:1px solid #17402f;cursor:pointer;transition:.12s}
+  .req:hover{border-color:var(--phosphor);background:#123026}
+  .req.urgent{border-color:var(--caution);background:#241d0e}
+  .req.urgent .req-bar i{background:var(--caution)}
+  .req-top{display:flex;justify-content:space-between;color:var(--tag)}
+  .req-top span{color:var(--ui)}
+  .req-kind{color:var(--ui);font-size:10.5px;margin:2px 0 4px}
+  .req-bar{height:3px;background:#0b241b;border-radius:2px;overflow:hidden}
+  .req-bar i{display:block;height:100%;background:var(--phosphor);transition:width .3s linear}
+  .req-none{color:var(--ui);font-style:italic}
+</style>
+</head>
+<body>
+<div id="hud">
+  <span class="brand">APPROACH</span>
+  <span>ZULU <b id="clock">00:00:00</b></span>
+  <span>AIRBORNE <b id="count">0</b></span>
+  <span>ALERTS <b id="alerts" style="color:var(--conflict)">0</b></span>
+  <span class="fld">KLAS <b id="klas">·</b></span>
+  <span class="fld">KVGT <b id="kvgt">·</b></span>
+  <span>GROUND <b id="ground" style="color:var(--caution)">0</b></span>
+  <span>SCALE <b id="scaletxt" class="fld">—</b></span>
+  <span>REQ <b id="reqcount">0</b></span>
+  <span>MISSED <b id="missed" style="color:var(--caution)">0</b></span>
+  <span>THREATS <b id="idd">0/2</b></span>
+  <span>FALSE POS <b id="falsepos" style="color:var(--caution)">0</b></span>
+  <span id="win" style="color:var(--phosphor);font-weight:600"></span>
+  <span id="nellis" style="color:#ff8a5c;font-weight:600"></span>
+  <span id="msg" style="color:var(--conflict)"></span>
+</div>
+
+<div id="mic">🎙 <span id="mic-text">LISTENING…</span></div>
+
+<div id="req-panel">
+  <h4>📋 PENDING REQUESTS</h4>
+  <div id="req-list"><div class="req-none">no pending requests</div></div>
+</div>
+
+<div id="help-panel">
+  <button id="help-close">✕</button>
+  <h4>KEYBOARD</h4>
+  <div class="row"><span>SPACE</span><span>pause / resume sim</span></div>
+  <div class="row"><span>1× / 2× / 4×</span><span>simulation speed</span></div>
+  <div class="row"><span>HOLD T</span><span>push-to-talk (voice, WIP)</span></div>
+  <div class="row"><span>CLICK TARGET</span><span>select an aircraft</span></div>
+  <h4>TARGET COMMANDS</h4>
+  <div class="row"><span>SAY ALTITUDE / STATUS</span><span>altitude &amp; intentions</span></div>
+  <div class="row"><span>CLIMB</span><span>+2000 ft</span></div>
+  <div class="row"><span>DESCEND</span><span>−2000 ft</span></div>
+  <div class="row"><span>TURN L / TURN R</span><span>30° vector</span></div>
+  <div class="row"><span>RESUME OWN NAV</span><span>cancel vectors</span></div>
+  <h4>VOICE PHRASES <span style="color:var(--caution)">(WIP)</span></h4>
+  <div class="ex">"United four eight two, climb"</div>
+  <div class="ex">"Southwest seven five five, turn left"</div>
+  <div class="ex">"SkyWest four four, say altitude"</div>
+  <div class="ex">"Delta one one niner, resume own navigation"</div>
+  <div class="note">Say the airline + callsign digits, then a command word
+    (climb / descend / turn left / turn right / say altitude / resume own
+    navigation). No callsign heard falls back to whatever's click-selected.</div>
+  <h4>RADIO</h4>
+  <div class="note">Two voices on frequency: the controller transmits, the
+    aircraft reads back. Each transmission is spliced from recorded words and
+    run through a VHF air-band chain — band-limited, driven and compressed,
+    with PTT clicks and squelch tails. A spoofed track has no aircraft behind
+    it, so calling one gets you dead air.</div>
+  <h4>THE SCENARIO</h4>
+  <div class="note"><b>Two different threats, and they are not the same
+    problem.</b> One track is a <b>spoofed ADS-B injection</b> — no aircraft
+    exists. One is a <b>real aircraft being hijacked</b>. Calling either one
+    wrong costs you: scramble fighters at a ghost and the real threat flies on
+    unescorted.</div>
+  <div class="note"><b>👻 GHOST tells</b> — squawk uses an impossible 8/9
+    (real codes are octal, 0–7) or duplicates another aircraft; its faint
+    primary-radar dot drifts away from the datablock; dead air, always.</div>
+  <div class="note"><b>🆘 HIJACK tells</b> — primary return correlates
+    <i>perfectly</i> (there is real metal up there) and it answers the radio
+    normally at first. Then a garbled transmission, squawk <b>7500</b>, NORDO,
+    and a turn for the Strip.</div>
+  <div class="note">The discriminator is the <b>primary return</b>. Radar
+    skin-paint doesn't care what a transponder claims — if the dot tracks the
+    datablock, the aircraft is real.</div>
+  <h4>READING ALTITUDE</h4>
+  <div class="note"><b>FL090 = 9,000 ft.</b> The datablock prints hundreds of
+    feet, so drop the last two zeros. FL120 = 12,000. FL045 = 4,500.
+    <b>↑</b> climbing, <b>↓</b> descending, blank = level.</div>
+  <div class="note"><b>Where the number comes from matters.</b> Altitude is
+    Mode C — it is <i>reported by the aircraft's transponder</i>, not measured
+    by the radar. Primary radar paints the skin and gives you position only.
+    So altitude is the easiest thing on the whole display to fake, and
+    position is the hardest.</div>
+  <h4>SPOOF vs HIJACK — THE RULE</h4>
+  <div class="note"><b>A spoof breaks physics. A hijack breaks the
+    clearance.</b> That one line separates them every time.</div>
+  <div class="note"><b>👻 Cyber attack / injected track</b><br>
+    • Altitude <b>steps 2,000–4,000 ft between sweeps</b> — the tag flashes the
+    jump in red. That implies 40,000+ fpm. A jet climbs ~2,000–3,000 fpm, so it
+    is physically impossible.<br>
+    • VERT RATE in the target panel reads <b>&gt;40k fpm ⚠</b>.<br>
+    • Groundspeed twitches by 80+ kt with no altitude or config change.<br>
+    • PRIMARY reads <b>x.xx NM OFF</b> — the skin paint and the datablock
+    disagree.<br>
+    • Squawk uses an <b>8 or 9</b> (⚠OCTAL on the tag) or duplicates another
+    aircraft. Real Mode A codes are octal: digits 0–7 only.<br>
+    • Dead air, every time.</div>
+  <div class="note"><b>🆘 Hijack of a real aircraft</b><br>
+    • Every number is <b>physically plausible</b> — smooth 1,800 fpm, speeds
+    that match altitude, no jumps.<br>
+    • PRIMARY reads <b>CORRELATED</b>. There is real metal up there.<br>
+    • Squawk is valid — until it becomes <b>7500</b>.<br>
+    • It talks to you normally, then goes quiet.<br>
+    • The anomaly is <i>intent</i>: an unauthorised descent, a turn off the
+    airway, a heading toward something populated.</div>
+  <div class="note"><b>Why it matters operationally:</b> the ghost wants your
+    attention and your fighters. The hijack wants neither. If you scramble at
+    the impossible-looking track, the plausible-looking one keeps flying at
+    the Strip.</div>
+  <h4>PRESSURE</h4>
+  <div class="note">Traffic keeps calling for clearances while all this
+    unfolds — landing, departure, descent, check-ins. Each has a countdown in
+    the 📋 panel; click one to issue the clearance. Let it lapse and it counts
+    against you. The emergency will not wait for you to finish.</div>
+  <h4>NELLIS ALERT FIVE</h4>
+  <div class="note">Confirming a spoofed track hands it to the military.
+    A two-ship of F-16s launches from KLSV, runs it down in lead pursuit at
+    supersonic dash, then joins formation and shadows it — watch the orange
+    chevrons close from the east. LAS VEGAS BLVD is marked on the scope; it
+    is what the alert is protecting. Run at 2× or 4× to watch the whole
+    intercept play out quickly.</div>
+</div>
+
+<div id="sel">
+  <h4 id="sel-cs">—</h4>
+  <div class="row"><span>SQUAWK</span><span id="sel-sq">—</span></div>
+  <div class="row"><span>ROUTE</span><span id="sel-rt">—</span></div>
+  <div class="row"><span>PHASE</span><span id="sel-ph">—</span></div>
+  <div class="row"><span>ALT</span><span id="sel-alt">—</span></div>
+  <div class="row"><span>HDG</span><span id="sel-hdg">—</span></div>
+  <div class="row"><span>GS</span><span id="sel-gs">—</span></div>
+  <div class="row"><span>PRIMARY</span><span id="sel-corr">—</span></div>
+  <div class="row"><span>VERT RATE</span><span id="sel-vs">—</span></div>
+</div>
+
+<canvas id="scope"></canvas>
+
+<div id="cmd">
+  <h4 id="cmd-title">— NO TARGET —</h4>
+  <div class="grid">
+    <button data-a="query" class="full">📻 SAY ALTITUDE / STATUS</button>
+    <button data-a="climb">CLIMB +2000</button>
+    <button data-a="descend">DESCEND −2000</button>
+    <button data-a="left">TURN L 30°</button>
+    <button data-a="right">TURN R 30°</button>
+    <button data-a="resume" class="full">↺ RESUME OWN NAV</button>
+    <button data-a="flag" class="full" style="border-color:var(--caution);color:var(--caution)">👻 FLAG AS SPOOFED</button>
+    <button data-a="hijack" class="full" style="border-color:var(--conflict);color:var(--conflict)">🆘 DECLARE HIJACK</button>
+  </div>
+</div>
+
+<div id="log"><div class="sys">— comms log —</div></div>
+
+<div id="ctl">
+  <button id="pause">⏸ PAUSE</button>
+  <button id="s1" class="on">1×</button><button id="s2">2×</button><button id="s4">4×</button>
+  <button id="voice" class="on">🔊 VOICE ON</button>
+  <button id="helpbtn">☰ COMMANDS</button>
+  <span class="sp"></span>
+  <span class="hint">two fields live · traffic flows KLAS ⇄ KVGT · click a target to vector it · hold T to talk to ATC</span>
+</div>
+
+<script src="voice/radio.js"></script>
+<script src="voice/phraseology.js"></script>
+<script>
+const cv=document.getElementById('scope'),ctx=cv.getContext('2d');
+let W,H,cx,cy,scale,pxPerInch=96;const RANGE_NM=42;
+/* CSS defines 1in == 96px at 100% zoom; measuring a live element tracks the
+   page's current zoom/DPI so the readout stays correct as the window changes,
+   but it is still CSS-inch, not a hardware measurement of the physical panel. */
+function getPxPerInch(){
+  const d=document.createElement('div');
+  d.style.cssText='position:absolute;visibility:hidden;width:1in;height:1in;left:-200vw;top:-200vh;';
+  document.body.appendChild(d);
+  const px=d.getBoundingClientRect().width||96;
+  document.body.removeChild(d);
+  return px;
+}
+function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;cx=W/2;cy=H/2;
+  scale=(Math.min(W,H)/2-40)/RANGE_NM;
+  pxPerInch=getPxPerInch();
+  const nmPerInch=pxPerInch/scale,el=document.getElementById('scaletxt');
+  if(el)el.textContent='1in≈'+nmPerInch.toFixed(1)+'NM';
+}
+addEventListener('resize',resize);resize();
+const R=d=>d*Math.PI/180,mono='"SFMono-Regular",Consolas,Menlo,monospace';
+
+/* ---- two airports, both inside the scope radius ---- */
+const airports={
+  KLAS:{name:'Harry Reid', x:-16,y:-11, elev:2181, rwyHdg:260, rwyId:'26'},
+  KVGT:{name:'North Las Vegas', x:16,y:14, elev:2205, rwyHdg:120, rwyId:'12'},
+  // Military field. Civilian traffic never routes here; it exists to launch
+  // the alert intercept, so it is excluded from the flow lanes and tallies.
+  KLSV:{name:'Nellis AFB', x:25,y:-11, elev:1870, rwyHdg:210, rwyId:'21', mil:true},
+  // Sky Harbor is far off-scope to the southeast. It is modelled as a handoff
+  // gate at the edge of radar cover, not a field: departures fly to it and get
+  // handed to Phoenix Center, arrivals appear out of it already at altitude.
+  KPHX:{name:'Sky Harbor', x:27,y:-31, elev:1135, rwyHdg:80, rwyId:'08', gate:true},
+};
+const other=id=>id==='KLAS'?'KVGT':'KLAS';
+const isGate=id=>!!(airports[id]&&airports[id].gate);
+// FAA 250 kt limit below 10,000 ft. Enforcing it is both correct and the
+// single biggest reason the picture reads calmer than it used to.
+const SPEED_LIMIT_ALT=10000, SPEED_LIMIT_KT=250;
+// The Strip, drawn as a protected landmark - it is what the alert is about.
+const STRIP={x1:-14.5,y1:-8.5,x2:-10.5,y2:-0.5,label:'LAS VEGAS BLVD'};
+const short=id=>id.slice(1); // KVGT -> VGT
+const APPROACH_NM=13;   // visible ring radius; matches the ARRIVING transition below
+const LANE_OFFSET_NM=1.6; // lateral offset between the inbound/outbound flow lanes
+
+/* ---- flights (each routes between the two fields) ---- */
+function mk(cs,tel,type,x,y,alt,origin,dest,cruise,gs,phase){
+  return{cs,tel,type,x,y,hdg:0,tHdg:0,gs,gsTgt:gs,cruiseGs:gs,
+    alt,tAlt:cruise,cruiseAlt:cruise,origin,dest,phase,auto:true,groundT:0,
+    sel:false,status:'ok'};
+}
+/* Traffic picture: a mixed arrival/departure bank rather than a shuttle.
+   Three inbound to land at the Vegas fields, three outbound to Phoenix, one
+   on the ground waiting to go, and FDX208 arriving off the Phoenix gate -
+   the long-haul inbound that turns into the emergency. Speeds are terminal
+   speeds now, and the aircraft are spread across the sector so datablocks
+   stay readable. */
+let planes=[
+  // --- inbound to land ---
+  mk('UAL482','United','B738',  -6,  6, 9000,'KPHX','KLAS', 9000,250,'ENROUTE'),
+  mk('SWA755','Southwest','B737',14, -2, 8000,'KPHX','KVGT', 8000,250,'ENROUTE'),
+  mk('DAL119','Delta','A320',    -2,-16, 7000,'KPHX','KLAS', 7000,240,'ENROUTE'),
+  // --- outbound to Sky Harbor ---
+  mk('AAL290','American','B739',-13, -3, 6000,'KLAS','KPHX',13000,250,'DEPARTING'),
+  mk('NKS822','Spirit','A320',    6, 13, 9000,'KVGT','KPHX',12000,250,'ENROUTE'),
+  mk('JBU631','JetBlue','A321', -18, -6, 4000,'KLAS','KPHX',11000,230,'DEPARTING'),
+  // --- on the ground at North Las Vegas ---
+  mk('SKW44','SkyWest','CRJ9',   16, 14, 2205,'KVGT','KPHX', 9000,150,'GROUND'),
+  // --- the Phoenix inbound that goes wrong ---
+  mk('FDX208','FedEx','B767',    20,-22,12000,'KPHX','KLAS',12000,270,'ENROUTE'),
+];
+planes.forEach(p=>{const d=airports[p.dest];p.hdg=p.tHdg=bearing(p,d);});
+
+/* ---- threat scenario ----
+   Two different problems share the scope, and separating them is the drill.
+
+   FDX208 is a REAL aircraft being hijacked. There is genuinely metal up
+   there, so its primary radar return correlates perfectly and it answers the
+   radio - right up until it doesn't. Partway through the run it squawks 7500
+   (the international hijack code), goes NORDO, and turns for the Strip.
+
+   One other track is a pure ADS-B injection: no aircraft exists, so there is
+   no primary correlation, the squawk is impossible or duplicated, and it is
+   dead air every single time. It is there to pull attention away from the
+   real emergency.
+
+   Reading one signature and assuming the other is the mistake the scenario
+   is built to punish. */
+const HIJACK_CS='FDX208', SQUAWK_HIJACK='7500';
+function randSquawk(){let s='';for(let i=0;i<4;i++)s+=Math.floor(Math.random()*8);return s;}
+planes.forEach(p=>{p.squawk=randSquawk();p.threat=null;p.flagged=false;
+  p.spoofPhase=Math.random()*Math.PI*2;p.nordo=false;});
+
+const hijackPlane=planes.find(p=>p.cs.trim()===HIJACK_CS);
+if(hijackPlane){hijackPlane.threat='hijack';hijackPlane.hjStage=0;}
+
+(function pickSpoof(){
+  // Must be an airborne track with altitude to play with - a fabricated
+  // aircraft parked on a real ramp makes no sense, and a ghost at pattern
+  // altitude has no room to show an impossible climb.
+  const pool=planes.filter(p=>p!==hijackPlane&&p.phase!=='GROUND'&&p.alt>5000);
+  const s=pool[Math.floor(Math.random()*pool.length)];
+  s.threat='spoof';
+  if(Math.random()<0.5){
+    const donor=planes.find(p=>!p.threat);
+    s.squawk=donor?donor.squawk:s.squawk;         // duplicate squawk tell
+  }else{
+    const d=s.squawk.split('');
+    d[Math.floor(Math.random()*4)]=Math.random()<0.5?'8':'9';
+    s.squawk=d.join('');                          // impossible octal digit tell
+  }
+})();
+
+const isSpoof=p=>p.threat==='spoof';
+const isHijack=p=>p.threat==='hijack';
+// A track only refuses the radio if it is a ghost, or a real aircraft that
+// has stopped answering.
+const isNordo=p=>isSpoof(p)||p.nordo;
+
+/* Reported (broadcast) position. Only a spoof can disagree with the primary
+   return - a hijacked aircraft is physically where it says it is. */
+function reportedPos(p){
+  if(!isSpoof(p))return{x:p.x,y:p.y};
+  const t=simTime*0.15+p.spoofPhase,drift=0.9;
+  return{x:p.x+Math.sin(t)*drift,y:p.y+Math.cos(t*1.3)*drift*0.7};
+}
+
+/* ---- spoof abnormalities ----
+   Everything on a datablock except the raw primary position comes from the
+   transponder, and a transponder can be made to say anything. A fabricated
+   track therefore has no airframe constraining it: the injected altitude
+   steps by thousands of feet between sweeps, which is a vertical rate no
+   jet can fly. That physical impossibility is the tell. */
+const SPOOF_JUMP_EVERY=4.5;   // seconds between fabricated altitude steps
+function stepSpoof(){
+  for(const p of planes){
+    if(!isSpoof(p))continue;
+    if(p.nextJump===undefined){p.nextJump=simTime+2;p.altJump=0;p.gsJump=0;}
+    if(simTime>=p.nextJump){
+      p.nextJump=simTime+SPOOF_JUMP_EVERY*(0.6+Math.random()*0.8);
+      p.lastAltJump=Math.round((Math.random()*4200+1800)/100)*100*(Math.random()<0.5?-1:1);
+      p.altJump=p.lastAltJump;
+      p.gsJump=Math.round((Math.random()*160-80)/10)*10;
+      p.jumpAt=simTime;
+    }
+  }
+}
+/** Mode C altitude as broadcast - fabricated for a ghost, honest otherwise. */
+function reportedAlt(p){
+  if(!isSpoof(p))return p.alt;
+  return Math.max(1000,p.alt+(p.altJump||0));
+}
+function reportedGs(p){
+  if(!isSpoof(p))return p.gs;
+  return Math.max(60,p.gs+(p.gsJump||0));
+}
+/** True if the last fabricated step was faster than any aircraft could climb. */
+function altJumpImpossible(p){
+  if(!isSpoof(p)||!p.lastAltJump)return false;
+  return Math.abs(p.lastAltJump)>1200 && (simTime-p.jumpAt)<2.5;
+}
+
+/* ---- hijack timeline ---- */
+const HJ_ODD_AT=50, HJ_SQUAWK_AT=95, HJ_TURN_AT=105;
+function stepHijack(){
+  const p=hijackPlane;if(!p||p.phase==='GROUND')return;
+  if(p.hjStage===0&&simTime>=HJ_ODD_AT){
+    p.hjStage=1;
+    log('plt','↳ '+p.cs.trim()+': "…stand by… we have a… situation on board, stand by."');
+    log('sys','▸ '+p.cs.trim()+' transmission irregular — no readback, open mic');
+  }
+  if(p.hjStage===1&&simTime>=HJ_SQUAWK_AT){
+    p.hjStage=2;p.squawk=SQUAWK_HIJACK;p.nordo=true;p.auto=false;
+    klaxon();
+    log('sys','🆘 SQUAWK 7500 — '+p.cs.trim()+' IS BROADCASTING THE HIJACK CODE. Primary return correlates: this is a REAL aircraft.');
+    document.getElementById('msg').textContent='🆘 HIJACK CODE 7500 — '+p.cs.trim();
+  }
+  if(p.hjStage===2&&simTime>=HJ_TURN_AT){
+    p.hjStage=3;
+    // Turn for the Strip and start descending toward it.
+    const mid={x:(STRIP.x1+STRIP.x2)/2,y:(STRIP.y1+STRIP.y2)/2};
+    p.tHdg=(Math.atan2(mid.x-p.x,mid.y-p.y)*180/Math.PI+360)%360;
+    p.tAlt=4000;p.gsTgt=Math.max(p.gsTgt,340);
+    log('sys','⚠ '+p.cs.trim()+' DEVIATING — turning toward LAS VEGAS BLVD, descending. Declare the hijack.');
+  }
+  if(p.hjStage===3){ // keep driving at the Strip
+    const mid={x:(STRIP.x1+STRIP.x2)/2,y:(STRIP.y1+STRIP.y2)/2};
+    p.tHdg=(Math.atan2(mid.x-p.x,mid.y-p.y)*180/Math.PI+360)%360;
+    p.tAlt=4000;
+  }
+}
+
+let simTime=0,paused=false,rate=1,sweep=0;
+const CF_NM=3,CF_FT=1000,CA_NM=6,CA_FT=1200;
+
+/* ---- live traffic requests ----
+   Aircraft call for clearances on their own schedule while the security
+   problem is unfolding. Each request has a hard deadline; letting one expire
+   costs you. This is the pressure: the emergency does not wait for you to
+   finish working the routine traffic, and the routine traffic does not wait
+   for the emergency. */
+let requests=[],reqSeq=0,missedReq=0,handledReq=0;
+const REQ_WINDOW=42;      // seconds to answer before it lapses
+const REQ_MIN_GAP=13, REQ_MAX_GAP=26;
+let nextReqAt=18;
+
+const REQ_KINDS={
+  landing:{label:'REQUESTS LANDING',verb:'requesting landing clearance',
+    reply:'cleared to land',ok:p=>p.phase==='ARRIVING'},
+  takeoff:{label:'READY FOR DEPARTURE',verb:'ready for departure',
+    reply:'cleared for takeoff',ok:p=>p.phase==='GROUND'},
+  descent:{label:'REQUESTS LOWER',verb:'requesting lower',
+    reply:'descend at pilot discretion',ok:p=>p.phase==='ENROUTE'&&p.alt>7000},
+  checkin:{label:'CHECKING IN',verb:'checking in with you',
+    reply:'radar contact',ok:p=>p.phase==='ENROUTE'||p.phase==='DEPARTING'},
+};
+
+function spawnRequest(){
+  // A ghost never calls, and an aircraft that has gone NORDO has stopped.
+  const eligible=planes.filter(p=>!isNordo(p)&&!requests.some(r=>r.cs===p.cs));
+  if(!eligible.length)return;
+  const p=eligible[Math.floor(Math.random()*eligible.length)];
+  const kinds=Object.keys(REQ_KINDS).filter(k=>REQ_KINDS[k].ok(p));
+  if(!kinds.length)return;
+  const kind=kinds[Math.floor(Math.random()*kinds.length)];
+  requests.push({id:++reqSeq,cs:p.cs,plane:p,kind,at:simTime,expires:simTime+REQ_WINDOW});
+  log('plt','↳ '+p.cs.trim()+': "'+REQ_KINDS[kind].verb+'."');
+}
+
+function answerRequest(id){
+  const i=requests.findIndex(r=>r.id===id);if(i<0)return;
+  const r=requests[i];requests.splice(i,1);handledReq++;
+  const k=REQ_KINDS[r.kind];
+  log('atc','"'+r.cs.trim()+', '+k.reply+'."');
+  if(r.kind==='takeoff'&&r.plane.phase==='GROUND')r.plane.groundT=Math.min(r.plane.groundT,1);
+  if(r.kind==='descent'){r.plane.auto=false;r.plane.tAlt=Math.max(4000,r.plane.tAlt-4000);}
+  updateReqHud();
+}
+
+function stepRequests(dt){
+  if(simTime>=nextReqAt){
+    spawnRequest();
+    nextReqAt=simTime+REQ_MIN_GAP+Math.random()*(REQ_MAX_GAP-REQ_MIN_GAP);
+  }
+  for(let i=requests.length-1;i>=0;i--){
+    if(simTime>=requests[i].expires){
+      const r=requests.splice(i,1)[0];missedReq++;
+      log('sys','⏱ MISSED — '+r.cs.trim()+' never got an answer ('+REQ_KINDS[r.kind].label.toLowerCase()+')');
+    }
+  }
+  updateReqHud();
+}
+
+function updateReqHud(){
+  const el=document.getElementById('reqcount');if(el)el.textContent=requests.length;
+  const m=document.getElementById('missed');if(m)m.textContent=missedReq;
+}
+
+function renderRequests(){
+  const box=document.getElementById('req-list');if(!box)return;
+  if(!requests.length){box.innerHTML='<div class="req-none">no pending requests</div>';return;}
+  box.innerHTML=requests.map(r=>{
+    const left=Math.max(0,r.expires-simTime),pct=Math.round(left/REQ_WINDOW*100);
+    const urgent=left<14;
+    return '<div class="req'+(urgent?' urgent':'')+'" data-id="'+r.id+'">'+
+      '<div class="req-top"><b>'+r.cs.trim()+'</b><span>'+Math.ceil(left)+'s</span></div>'+
+      '<div class="req-kind">'+REQ_KINDS[r.kind].label+'</div>'+
+      '<div class="req-bar"><i style="width:'+pct+'%"></i></div></div>';
+  }).join('');
+}
+
+/* ---- Nellis alert flight ----
+   Flagging a spoofed track hands it to the military: a two-ship launches from
+   KLSV, runs it down at afterburner, then falls into formation and shadows it.
+   Fighters are kept out of `planes` so they never route like airline traffic
+   or trip the civilian separation alerts while deliberately closing to zero. */
+let fighters=[];
+const scrambled=new Set();
+// Supersonic dash - an alert intercept is flown at full military power, and
+// it keeps the run-in dramatic rather than a two-minute wait.
+const FTR_SPEED=780, FTR_CRUISE=17000, FTR_TURN=8; // deg/s - fighters out-turn airliners
+const JOIN_NM=0.8;    // formation position off the target's wing once joined
+const TRAIL_NM=0.45;  // loose spacing held during the run-in
+const ARRIVE_NM=1.4;  // range at which the intercept is called complete
+
+function mkFighter(cs,target,slot){
+  const ap=airports.KLSV;
+  // Element lead and wingman roll a few seconds apart, so they never occupy
+  // the same pixel on the scope.
+  const stagger=slot*0.35;
+  return{cs,tel:'Viper',type:'F-16C',
+    x:ap.x-Math.sin(R(ap.rwyHdg))*stagger,
+    y:ap.y-Math.cos(R(ap.rwyHdg))*stagger,
+    alt:ap.elev,hdg:ap.rwyHdg,tHdg:ap.rwyHdg,gs:0,slot,target,phase:'SCRAMBLE',
+    mil:true,sel:false,status:'ok'};
+}
+
+/** Speak one Nellis line, falling back to synthesis until it is recorded. */
+function nellisSay(key,text){
+  log('mil','◈ NELLIS: "'+text+'"');
+  if(!voiceOn)return Promise.resolve();
+  const clip=PHRASE&&PHRASE.NELLIS&&PHRASE.NELLIS[key];
+  if(typeof RADIO!=='undefined'&&RADIO.isReady()&&clip&&RADIO.has('nellis',clip)){
+    return RADIO.transmit('nellis',[clip]);
+  }
+  if(typeof speak==='function')speak(text);
+  return new Promise(r=>setTimeout(r,text.length*52));
+}
+
+function scrambleNellis(target){
+  if(scrambled.has(target.cs))return;
+  scrambled.add(target.cs);
+  fighters.push(mkFighter('VIPER01',target,0),mkFighter('VIPER02',target,1));
+  klaxon();
+  log('sys','🚨 ALERT FIVE SCRAMBLE — '+target.cs.trim()+' inbound LAS VEGAS BLVD');
+
+  // Nellis works the problem on its own frequency while you keep your traffic.
+  // Builds from a controlled acknowledgement to the shouted launch order.
+  (async()=>{
+    await new Promise(r=>setTimeout(r,700));
+    await nellisSay('copy','Nellis Control. We have your hijack code. Stand by.');
+    await nellisSay('klaxon','KLAXON! KLAXON! KLAXON! ALERT FIVE — BATTLE STATIONS!');
+    await nellisSay('notdrill','THIS IS NOT A DRILL! THIS IS NOT A DRILL!');
+    await nellisSay('scramble','SCRAMBLE! SCRAMBLE! SCRAMBLE! DEPLOY THE FIGHTER JETS! LAUNCH! LAUNCH! LAUNCH!');
+    await nellisSay('cleared','Viper flight, cleared to intercept. Vectors on you now.');
+    await new Promise(r=>setTimeout(r,500));
+    await nellisSay('nordo','Target squawking seven five zero zero. NORDO. Deviating from course.');
+    await nellisSay('yourtfc','Approach, work your traffic. We have this one.');
+  })();
+}
+
+function stepFighters(dt){
+  for(const f of fighters){
+    const t=f.target;
+    // Formation slot, line abreast off the target's heading. The element flies
+    // loose during the run-in and tightens once joined, so the two returns stay
+    // separately readable on the scope throughout.
+    const perp=R((t.hdg+90)%360);
+    const spread=f.phase==='ESCORT'?JOIN_NM:TRAIL_NM;
+    const off=(f.slot===0?-1:1)*spread;
+    let aimX=t.x+Math.sin(perp)*off;
+    let aimY=t.y+Math.cos(perp)*off;
+
+    if(f.phase==='INTERCEPT'){
+      // Lead pursuit: steer at where the target will be, not where it is.
+      // Pure pursuit degenerates into a stern chase that closes only at the
+      // speed difference; cutting the corner is both faster and how an actual
+      // intercept is flown. Solved twice - the first pass gives a time
+      // estimate, the second refines it against the leading aimpoint.
+      const tvx=Math.sin(R(t.hdg))*t.gs/3600, tvy=Math.cos(R(t.hdg))*t.gs/3600;
+      const ownSpeed=Math.max(f.gs,120)/3600;
+      let tti=Math.hypot(aimX-f.x,aimY-f.y)/ownSpeed;
+      for(let k=0;k<2;k++){
+        const px=aimX+tvx*tti, py=aimY+tvy*tti;
+        tti=Math.min(600,Math.hypot(px-f.x,py-f.y)/ownSpeed);
+      }
+      aimX+=tvx*tti;aimY+=tvy*tti;
+    }
+
+    const dx=aimX-f.x, dy=aimY-f.y, range=Math.hypot(dx,dy);
+    f.range=Math.hypot(t.x-f.x,t.y-f.y);
+    f.tHdg=(Math.atan2(dx,dy)*180/Math.PI+360)%360;
+
+    if(f.phase==='SCRAMBLE'){
+      f.gs=Math.min(FTR_SPEED,f.gs+140*dt);            // takeoff roll + accel
+      f.alt=Math.min(FTR_CRUISE,f.alt+22000/60*dt);    // military climb rate
+      if(f.alt>6000)f.phase='INTERCEPT';
+    }else if(f.phase==='INTERCEPT'){
+      f.gs=lerp(f.gs,FTR_SPEED,Math.min(1,dt*0.5));
+      f.alt+=Math.sign(t.alt-f.alt)*Math.min(Math.abs(t.alt-f.alt),20000/60*dt);
+      if(f.range<ARRIVE_NM){
+        f.phase='ESCORT';
+        log('sys','🛩 '+f.cs+' JOINED — visual on '+t.cs.trim());
+        if(f.slot===0){
+          (async()=>{
+            await nellisSay('tally','Viper Zero One, tally the target. Closing.');
+            await nellisSay('visual','Viper Zero One is visual. Cockpit unresponsive.');
+            await nellisSay('hold','WEAPONS HOLD! REPEAT — WEAPONS HOLD!');
+            await nellisSay('shadow','Nellis has the track. Viper flight in the block, shadowing.');
+          })();
+        }
+      }
+    }else{ // ESCORT - match the target and hold station
+      f.gs=lerp(f.gs,Math.max(t.gs,180),Math.min(1,dt*0.9));
+      f.alt+=Math.sign(t.alt-f.alt)*Math.min(Math.abs(t.alt-f.alt),12000/60*dt);
+      if(range<0.25)f.tHdg=t.hdg; // in the slot: fly the target's heading
+    }
+
+    let dh=((f.tHdg-f.hdg+540)%360)-180, turn=FTR_TURN*dt;
+    if(Math.abs(dh)<=turn)f.hdg=f.tHdg;else f.hdg=(f.hdg+Math.sign(dh)*turn+360)%360;
+    const d=f.gs/3600*dt;
+    f.x+=Math.sin(R(f.hdg))*d;f.y+=Math.cos(R(f.hdg))*d;
+  }
+}
+
+// Rising two-tone alert klaxon.
+function klaxon(){try{const a=getCtx();let t=a.currentTime;
+  for(let i=0;i<4;i++){
+    const o=a.createOscillator(),g=a.createGain();
+    o.type='sawtooth';o.frequency.setValueAtTime(i%2?520:760,t);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.16,t+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.30);
+    const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2200;
+    o.connect(lp).connect(g).connect(a.destination);o.start(t);o.stop(t+0.32);
+    t+=0.34;
+  }
+}catch(e){}}
+
+function bearing(p,ap){let b=Math.atan2(ap.x-p.x,ap.y-p.y)*180/Math.PI;return(b+360)%360;}
+function dist(p,ap){return Math.hypot(ap.x-p.x,ap.y-p.y);}
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+function step(dt){
+  simTime+=dt;
+  for(const p of planes){
+    const dst=airports[p.dest], org=airports[p.origin], dD=dist(p,dst);
+
+    if(p.phase==='GROUND'){
+      // Parked at the field it is sitting on - that is its ORIGIN, not its
+      // destination. (Keying this off dest teleported ground traffic to the
+      // Phoenix gate once KPHX entered the route network.)
+      const home=airports[p.origin]||dst;
+      p.gs=0;p.x=home.x;p.y=home.y;p.alt=home.elev;p.groundT-=dt;
+      if(p.groundT<=0){
+        p.auto=true;p.phase='DEPARTING';
+        p.tAlt=p.cruiseAlt;p.gsTgt=p.cruiseGs;
+        p.hdg=p.tHdg=home.rwyHdg;p.alt=home.elev;
+      }
+      continue;
+    }
+
+    // Departures bound for Phoenix leave radar cover at the gate and are
+    // handed to the next centre, then re-enter later as an inbound so the
+    // sector keeps a steady bank of traffic.
+    if(isGate(p.dest)&&dD<2.5){
+      log('sys','▸ '+p.cs.trim()+' handed off to Phoenix Center — leaving radar cover');
+      p.origin='KPHX';p.dest=Math.random()<0.5?'KLAS':'KVGT';
+      const g=airports.KPHX;
+      p.x=g.x;p.y=g.y;p.phase='ENROUTE';p.auto=true;
+      p.alt=p.cruiseAlt;p.tAlt=p.cruiseAlt;
+      p.hdg=p.tHdg=bearing(p,airports[p.dest]);
+      continue;
+    }
+
+    if(p.auto){
+      if(p.phase==='DEPARTING'){
+        p.gsTgt=p.cruiseGs;p.tAlt=p.cruiseAlt;
+        p.tHdg=bearing(p,dst);
+        if(p.alt>p.cruiseAlt-1200 || dist(p,org)>7) p.phase='ENROUTE';
+      } else if(p.phase==='ENROUTE'){
+        p.tHdg=bearing(p,dst);p.tAlt=p.cruiseAlt;p.gsTgt=p.cruiseGs;
+        if(!isGate(p.dest)&&dD<APPROACH_NM) p.phase='ARRIVING';
+      } else if(p.phase==='ARRIVING'){
+        p.tHdg=bearing(p,dst);
+        p.tAlt=dst.elev+400;          // descend to the field
+        p.gsTgt=dD<6?170:230;         // slow on approach
+        if(dD<1.3 && p.alt<dst.elev+900){
+          p.phase='GROUND';p.groundT=8;p.gs=0;p.x=dst.x;p.y=dst.y;p.alt=dst.elev;
+          continue;
+        }
+      }
+    }
+
+    // turn toward target heading (standard rate 3°/s)
+    let dh=((p.tHdg-p.hdg+540)%360)-180, turn=3*dt;
+    if(Math.abs(dh)<=turn)p.hdg=p.tHdg;else p.hdg=(p.hdg+Math.sign(dh)*turn+360)%360;
+    // ease speed toward target, honouring the 250 kt / 10,000 ft rule
+    const cap=p.alt<SPEED_LIMIT_ALT?SPEED_LIMIT_KT:Infinity;
+    p.gs=lerp(p.gs,Math.min(p.gsTgt,cap),Math.min(1,dt*0.4));
+    // move
+    const d=p.gs/3600*dt;
+    p.x+=Math.sin(R(p.hdg))*d;p.y+=Math.cos(R(p.hdg))*d;
+    // altitude toward target ~1800 fpm
+    const climb=1800/60*dt;
+    if(Math.abs(p.alt-p.tAlt)<=climb)p.alt=p.tAlt;else p.alt+=Math.sign(p.tAlt-p.alt)*climb;
+    p.status='ok';
+  }
+  stepHijack();stepSpoof();stepRequests(dt);stepFighters(dt);
+  // separation (ignore aircraft on the ground)
+  const air=planes.filter(p=>p.phase!=='GROUND');
+  for(let i=0;i<air.length;i++)for(let j=i+1;j<air.length;j++){
+    const a=air[i],b=air[j],h=Math.hypot(a.x-b.x,a.y-b.y),v=Math.abs(a.alt-b.alt);
+    if(h<CF_NM&&v<CF_FT)a.status=b.status='conflict';
+    else if(h<CA_NM&&v<CA_FT){if(a.status!=='conflict')a.status='caution';
+      if(b.status!=='conflict')b.status='caution';}
+  }
+  document.getElementById('alerts').textContent=
+    Math.ceil(air.filter(p=>p.status==='conflict').length/2);
+}
+
+/* ---------- voice + radio ---------- */
+let voiceOn=true,actx=null,pickedVoice=null,hissSrc=null,hissGain=null;
+function loadVoice(){const vs=speechSynthesis.getVoices();
+  pickedVoice=vs.find(v=>/en-US/.test(v.lang)&&/male|david|fred|alex|mark|guy/i.test(v.name))
+    ||vs.find(v=>/en-GB/.test(v.lang)&&/male|george|ryan/i.test(v.name))
+    ||vs.find(v=>/en-US/.test(v.lang))||vs.find(v=>/en/.test(v.lang))||vs[0];}
+if('speechSynthesis'in window){speechSynthesis.onvoiceschanged=loadVoice;loadVoice();}
+function getCtx(){actx=actx||new(window.AudioContext||window.webkitAudioContext)();return actx;}
+// short high-pitched blip that mimics a PTT button keying the transmitter
+function keyClick(){try{const a=getCtx(),o=a.createOscillator(),g=a.createGain();
+  o.type='square';o.frequency.value=1200;
+  g.gain.setValueAtTime(.16,a.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.03);
+  o.connect(g).connect(a.destination);o.start();o.stop(a.currentTime+.035);
+}catch(e){}}
+// unkey/static burst played at the start and end of a transmission
+function squelch(){try{const a=getCtx(),dur=0.07,sr=a.sampleRate,buf=a.createBuffer(1,sr*dur,sr),dd=buf.getChannelData(0);
+  for(let i=0;i<dd.length;i++)dd[i]=(Math.random()*2-1)*Math.pow(1-i/dd.length,1.6);
+  const s=a.createBufferSource();s.buffer=buf;
+  const bp=a.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1700;bp.Q.value=0.9;
+  const g=a.createGain();g.gain.value=0.3;s.connect(bp).connect(g).connect(a.destination);s.start();
+}catch(e){}}
+// continuous band-limited carrier hiss under the spoken words — speechSynthesis
+// audio can't be routed through WebAudio for real filtering, so this ambient
+// bed is what actually sells the "open radio channel" character
+function hissStart(){try{const a=getCtx(),sr=a.sampleRate,len=sr*2,buf=a.createBuffer(1,len,sr),dd=buf.getChannelData(0);
+  for(let i=0;i<len;i++)dd[i]=Math.random()*2-1;
+  const src=a.createBufferSource();src.buffer=buf;src.loop=true;
+  const bp=a.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2000;bp.Q.value=0.6;
+  const g=a.createGain();g.gain.value=0;g.gain.setTargetAtTime(0.045,a.currentTime,0.02);
+  src.connect(bp).connect(g).connect(a.destination);src.start();
+  hissSrc=src;hissGain=g;
+}catch(e){}}
+function hissStop(){if(!hissGain||!hissSrc)return;try{const a=getCtx();
+  hissGain.gain.setTargetAtTime(0,a.currentTime,0.05);
+  const n=hissSrc;setTimeout(()=>{try{n.stop();}catch(e){}},250);
+}catch(e){}hissSrc=hissGain=null;}
+// Fallback only. RADIO (spliced ElevenLabs clips) is the real voice path; this
+// covers the case where the clips could not be fetched, e.g. the page was
+// opened from disk instead of served over http.
+function speak(t){if(!voiceOn||!('speechSynthesis'in window))return;
+  keyClick();squelch();
+  setTimeout(()=>{
+    hissStart();
+    const u=new SpeechSynthesisUtterance(t);if(pickedVoice)u.voice=pickedVoice;
+    u.rate=1.16;u.pitch=0.86;u.volume=1;
+    u.onend=()=>{hissStop();squelch();};
+    speechSynthesis.speak(u);
+  },90);
+}
+const DIG={0:'zero',1:'one',2:'two',3:'three',4:'four',5:'five',6:'six',7:'seven',8:'eight',9:'niner'};
+const digits=n=>String(n).split('').map(c=>DIG[c]??c).join(' ');
+const csWords=p=>p.tel+' '+digits(p.cs.replace(/\D/g,''));
+const hdgWords=h=>'heading '+digits(String(Math.round(h)).padStart(3,'0'));
+function altWords(ft){ft=Math.round(ft/100)*100;if(ft>=18000)return'flight level '+digits(ft/100);
+  const th=Math.floor(ft/1000),h=(ft%1000)/100;let s=th?(th<10?DIG[th]:digits(th))+' thousand':'';
+  if(h)s+=(s?' ':'')+DIG[h]+' hundred';return s||'zero';}
+function log(who,txt){const el=document.getElementById('log'),d=document.createElement('div');
+  d.className=who;const t=document.getElementById('clock').textContent.slice(0,5);
+  d.innerHTML='<span class="t">'+t+'</span>'+txt;el.appendChild(d);el.scrollTop=el.scrollHeight;}
+let idd=0,falsepos=0;
+function scoreThreat(){
+  document.getElementById('idd').textContent=idd+'/2';
+  if(idd>=2){
+    log('sys','🏆 SECTOR SECURED — ghost track identified and the real hijack declared.');
+    document.getElementById('win').textContent='🏆 SECTOR SECURED — 2/2 RESOLVED';
+  }
+}
+function misclassify(p,msg){
+  falsepos++;document.getElementById('falsepos').textContent=falsepos;
+  log('sys','❌ '+p.cs.trim()+' — '+msg);
+}
+
+/** 👻 FLAG AS SPOOFED — claims no aircraft exists behind the track. */
+function handleFlag(p){
+  if(p.flagged){log('sys','▸ '+p.cs.trim()+' already resolved.');return;}
+  if(isSpoof(p)){
+    p.flagged=true;idd++;
+    log('sys','👻 '+p.cs.trim()+' CONFIRMED SPOOFED — squawk '+p.squawk+
+        ' invalid/duplicated, no primary correlation, dead air throughout. Track deleted.');
+    scoreThreat();
+  }else if(isHijack(p)){
+    misclassify(p,'that is NOT a ghost. Primary radar correlates — there is a real aircraft there. Look again.');
+  }else{
+    misclassify(p,'flagged in error, that track is legitimate.');
+  }
+}
+
+/** 🆘 DECLARE HIJACK — claims a real aircraft has been taken. Scrambles Nellis. */
+function handleHijack(p){
+  if(p.flagged){log('sys','▸ '+p.cs.trim()+' already resolved.');return;}
+  if(isHijack(p)){
+    p.flagged=true;idd++;
+    log('sys','🆘 HIJACK DECLARED — '+p.cs.trim()+', squawk '+p.squawk+
+        ', NORDO, deviating toward LAS VEGAS BLVD. Real aircraft, real emergency.');
+    setTimeout(()=>scrambleNellis(p),600);
+    scoreThreat();
+  }else if(isSpoof(p)){
+    misclassify(p,'no aircraft exists there — the primary return does not correlate. '+
+      'Scrambling fighters at a ghost leaves the real threat unescorted.');
+  }else{
+    misclassify(p,'that aircraft is answering normally and squawking a valid code.');
+  }
+}
+const radioLive=()=>voiceOn&&typeof RADIO!=='undefined'&&RADIO.isReady();
+let txBusy=false; // one transmission at a time — the frequency is shared
+
+function handleGhostResponse(p,a){
+  if(a==='flag'){handleFlag(p);return;}
+  if(a==='hijack'){handleHijack(p);return;}
+  if(a==='resume'){p.auto=true;log('sys','▸ '+p.cs.trim()+' vector cancelled — no acknowledgment was ever received');return;}
+  // A spoofed track has no aircraft behind it: the controller transmits, and
+  // nothing comes back.
+  const verb=a==='query'?'say altitude and intentions':
+    a==='climb'?'climb and maintain '+altWords(p.tAlt+2000).toUpperCase():
+    a==='descend'?'descend and maintain '+altWords(Math.max(2000,p.tAlt-2000)).toUpperCase():
+    'turn '+a+' '+hdgWords((p.hdg+(a==='left'?-30:30)+360)%360).toUpperCase();
+  log('atc','"'+p.cs.trim()+', '+verb+'."');
+
+  const ghostAlt=a==='climb'?p.tAlt+2000:a==='descend'?Math.max(2000,p.tAlt-2000):p.tAlt;
+  const ghostHdg=(p.hdg+(a==='left'?-30:a==='right'?30:0)+360)%360;
+  const spoken={...p,tAlt:ghostAlt,tHdg:ghostHdg};
+
+  if(radioLive()){
+    if(txBusy){log('plt','↳ …(no response — dead air)');return;}
+    txBusy=true;
+    const seq=PHRASE.atc(spoken,a);
+    Promise.resolve(seq?RADIO.transmit('atc',seq):null)
+      .then(()=>new Promise(r=>setTimeout(r,500+Math.random()*400)))
+      .then(()=>{log('plt','↳ …(no response — dead air)');return RADIO.deadAir('pilot');})
+      .finally(()=>{txBusy=false;});
+  }else{
+    setTimeout(()=>{log('plt','↳ …(no response — dead air)');keyClick();squelch();},600+Math.random()*500);
+  }
+}
+
+function command(p,a){
+  if(a==='flag'){handleFlag(p);return;}
+  if(a==='hijack'){handleHijack(p);return;}
+  // A ghost never answers; a hijacked aircraft answers until it goes NORDO.
+  if(isNordo(p)){handleGhostResponse(p,a);return;}
+  if(a==='resume'){p.auto=true;log('sys','▸ '+p.cs.trim()+' resumed own navigation to '+p.dest);return;}
+  let atc='',plt='';
+  if(a==='query'){atc='"'+p.cs.trim()+', say altitude and intentions."';
+    const where=p.phase==='ARRIVING'?'inbound '+p.dest:p.phase==='DEPARTING'?'departing '+p.origin:'enroute '+p.dest;
+    if(p.alt<p.tAlt)plt=csWords(p)+', climbing through '+altWords(p.alt)+' for '+altWords(p.tAlt)+', '+where;
+    else if(p.alt>p.tAlt)plt=csWords(p)+', descending through '+altWords(p.alt)+', '+where;
+    else plt=csWords(p)+', level '+altWords(p.alt)+', '+where;}
+  else if(a==='climb'){p.auto=false;p.tAlt+=2000;
+    atc='"'+p.cs.trim()+', climb and maintain '+altWords(p.tAlt).toUpperCase()+'."';
+    plt='Climb and maintain '+altWords(p.tAlt)+', '+csWords(p);}
+  else if(a==='descend'){p.auto=false;p.tAlt=Math.max(2000,p.tAlt-2000);
+    atc='"'+p.cs.trim()+', descend and maintain '+altWords(p.tAlt).toUpperCase()+'."';
+    plt='Descend and maintain '+altWords(p.tAlt)+', '+csWords(p);}
+  else if(a==='left'||a==='right'){p.auto=false;const dir=a==='left'?-30:30;
+    p.tHdg=(p.hdg+dir+360)%360;
+    atc='"'+p.cs.trim()+', turn '+a+' '+hdgWords(p.tHdg).toUpperCase()+'."';
+    plt=(a==='left'?'Left ':'Right ')+hdgWords(p.tHdg)+', '+csWords(p);}
+
+  log('atc',atc);
+
+  if(radioLive()){
+    if(txBusy){
+      // The frequency is already in use. Real controllers wait rather than
+      // talk over a transmission, so log the readback without audio instead
+      // of dropping to the synthesized fallback and doubling up.
+      log('plt','↳ '+plt);
+      return;
+    }
+    // Full exchange: controller keys up, pilot reads back after a beat.
+    txBusy=true;
+    const atcSeq=PHRASE.atc(p,a),pltSeq=PHRASE.pilot(p,a);
+    Promise.resolve(atcSeq?RADIO.transmit('atc',atcSeq):null)
+      .then(()=>new Promise(r=>setTimeout(r,380+Math.random()*260)))
+      .then(()=>{log('plt','↳ '+plt);return pltSeq?RADIO.transmit('pilot',pltSeq):null;})
+      .catch(e=>console.warn('transmission failed:',e))
+      .finally(()=>{txBusy=false;});
+  }else{
+    setTimeout(()=>{log('plt','↳ '+plt);speak(plt);},450);
+  }
+}
+
+/* ---------- voice commands (push-to-talk, hold T) ---------- */
+// Chrome's recognizer often transcribes spoken numbers as numerals ("755")
+// rather than words ("seven five five"), so match digits by stripping
+// everything down to a plain digit string instead of expecting one format.
+const WORD_TO_DIGIT={zero:'0',one:'1',two:'2',three:'3',four:'4',five:'5',
+  six:'6',seven:'7',eight:'8',nine:'9',niner:'9'};
+function normalizeDigits(text){
+  return text.toLowerCase().replace(/[a-z]+/g,w=>WORD_TO_DIGIT[w]!==undefined?WORD_TO_DIGIT[w]:w);
+}
+function findPlaneByVoice(text){
+  const lower=text.toLowerCase(),digitsOnly=normalizeDigits(text).replace(/[^0-9]/g,'');
+  return planes.find(p=>lower.includes(p.tel.toLowerCase())&&digitsOnly.includes(p.cs.replace(/\D/g,'')))||null;
+}
+function parseVoiceCommand(text){
+  text=text.toLowerCase();
+  if(/climb/.test(text))return'climb';
+  if(/descend|down/.test(text))return'descend';
+  if(/resume|own\s+navigation|cancel\s+vector/.test(text))return'resume';
+  if(/turn\s+left|left\s+turn/.test(text))return'left';
+  if(/turn\s+right|right\s+turn/.test(text))return'right';
+  if(/altitude|status|intentions|report|say\s+again/.test(text))return'query';
+  return null;
+}
+let recognition=null,listening=false;
+const SRClass=window.SpeechRecognition||window.webkitSpeechRecognition;
+function micUI(active,text){const el=document.getElementById('mic');if(!el)return;
+  el.style.display=active?'flex':'none';
+  if(text!==undefined)document.getElementById('mic-text').textContent=text;}
+function handleVoiceCommand(transcript){
+  log('sys','🎙 heard: "'+transcript+'"');
+  const target=findPlaneByVoice(transcript)||planes.find(x=>x.sel);
+  if(!target){log('sys','▸ no aircraft identified — include a callsign, e.g. "United four eight two"');return;}
+  const action=parseVoiceCommand(transcript);
+  if(!action){log('sys','▸ command not understood for '+target.cs.trim());return;}
+  planes.forEach(p=>p.sel=false);target.sel=true;
+  command(target,action);
+}
+function startListening(){
+  if(listening)return;
+  if(!SRClass){log('sys','▸ voice recognition unsupported — try Chrome or Edge');return;}
+  recognition=new SRClass();recognition.lang='en-US';recognition.continuous=false;
+  recognition.interimResults=false;recognition.maxAlternatives=1;
+  listening=true;micUI(true,'LISTENING…');
+  recognition.onresult=e=>handleVoiceCommand(e.results[0][0].transcript);
+  recognition.onerror=e=>{
+    if(e.error==='no-speech')log('sys','▸ no speech detected');
+    else if(e.error==='not-allowed'||e.error==='service-not-allowed')
+      log('sys','▸ mic blocked — allow microphone access (voice commands need https:// or localhost, not a bare file:// page)');
+    else if(e.error==='audio-capture')
+      log('sys','▸ no mic audio reached the browser — check Windows mic privacy settings and that no other app has it locked');
+    else log('sys','▸ mic error: '+e.error);
+  };
+  recognition.onend=()=>{listening=false;micUI(false);};
+  try{recognition.start();}catch(e){listening=false;micUI(false);}
+}
+function stopListening(){if(recognition&&listening){try{recognition.stop();}catch(e){}}}
+
+/* ---------- render ---------- */
+function drawScope(){
+  ctx.lineWidth=1;
+  for(let nm=10;nm<=RANGE_NM;nm+=10){ctx.beginPath();ctx.arc(cx,cy,nm*scale,0,7);
+    ctx.strokeStyle='#123b2c';ctx.stroke();
+    ctx.fillStyle='#1c5a41';ctx.font='10px '+mono;ctx.fillText(nm+'',cx+4,cy-nm*scale+12);}
+  ctx.strokeStyle='#0f3527';
+  for(let a=0;a<360;a+=30){const rad=R(a),r1=RANGE_NM*scale,r2=r1-(a%90===0?16:9);
+    ctx.beginPath();ctx.moveTo(cx+Math.sin(rad)*r1,cy-Math.cos(rad)*r1);
+    ctx.lineTo(cx+Math.sin(rad)*r2,cy-Math.cos(rad)*r2);ctx.stroke();
+    if(a%90===0){ctx.fillStyle='#2a6b4e';ctx.font='11px '+mono;
+      ctx.fillText({0:'N',90:'E',180:'S',270:'W'}[a],
+        cx+Math.sin(rad)*(r1-30)-3,cy-Math.cos(rad)*(r1-30)+4);}}
+}
+function drawStrip(){
+  const x1=cx+STRIP.x1*scale,y1=cy-STRIP.y1*scale,
+        x2=cx+STRIP.x2*scale,y2=cy-STRIP.y2*scale;
+  const hot=fighters.length>0;
+  ctx.save();
+  ctx.strokeStyle=hot?'#ff9a4d':'#c8a24d';
+  ctx.globalAlpha=hot?.5+.3*Math.sin(simTime*3):.4;
+  ctx.lineWidth=7;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.globalAlpha=1;ctx.lineCap='butt';
+  ctx.fillStyle=hot?'#ffb066':'#a8873f';ctx.font='9px '+mono;ctx.textBaseline='middle';
+  ctx.fillText(STRIP.label,x2+9,(y1+y2)/2);
+  ctx.restore();
+}
+function drawAirports(){
+  for(const id in airports){
+    const ap=airports[id],sx=cx+ap.x*scale,sy=cy-ap.y*scale;
+    if(ap.gate){
+      // Handoff gate at the edge of cover, not a field on this scope.
+      ctx.save();
+      ctx.strokeStyle='#9d8bd8';ctx.lineWidth=1.6;ctx.globalAlpha=.85;
+      ctx.beginPath();ctx.moveTo(sx-11,sy+9);ctx.lineTo(sx,sy-9);ctx.lineTo(sx+11,sy+9);
+      ctx.closePath();ctx.stroke();
+      ctx.setLineDash([3,4]);ctx.globalAlpha=.35;
+      ctx.beginPath();ctx.arc(sx,sy,2.4*scale,0,7);ctx.stroke();ctx.setLineDash([]);
+      ctx.globalAlpha=1;
+      ctx.fillStyle='#c3b5f0';ctx.font='12px '+mono;ctx.textBaseline='top';
+      ctx.fillText(id,sx+15,sy-6);
+      ctx.fillStyle='#7c6bab';ctx.font='10px '+mono;
+      ctx.fillText('PHOENIX GATE',sx+15,sy+8);
+      ctx.restore();
+      continue;
+    }
+    const mil=!!ap.mil, base=mil?'#ff8a5c':'#7db8ff';
+    if(!mil){
+      // visible approach/departure radius (civilian fields only)
+      const rr=APPROACH_NM*scale;
+      ctx.beginPath();ctx.setLineDash([4,5]);ctx.arc(sx,sy,rr,0,7);
+      ctx.strokeStyle='rgba(125,184,255,0.35)';ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='rgba(125,184,255,0.55)';ctx.font='9px '+mono;ctx.textBaseline='bottom';
+      ctx.fillText(APPROACH_NM+' NM',sx-14,sy-rr-3);
+    }else{
+      // restricted-airspace hatch ring
+      ctx.beginPath();ctx.setLineDash([2,6]);ctx.arc(sx,sy,5.5*scale,0,7);
+      ctx.strokeStyle='rgba(255,138,92,0.4)';ctx.lineWidth=1.2;ctx.stroke();ctx.setLineDash([]);
+    }
+    // runway line
+    const rad=R(ap.rwyHdg),len=2.0*scale;
+    ctx.strokeStyle=base;ctx.lineWidth=2.4;
+    ctx.beginPath();
+    ctx.moveTo(sx+Math.sin(rad)*len,sy-Math.cos(rad)*len);
+    ctx.lineTo(sx-Math.sin(rad)*len,sy+Math.cos(rad)*len);ctx.stroke();
+    // field marker (diamond)
+    ctx.fillStyle=base;ctx.save();ctx.translate(sx,sy);ctx.rotate(Math.PI/4);
+    ctx.fillRect(-3,-3,6,6);ctx.restore();
+    // label
+    ctx.fillStyle=mil?'#ffb499':'#a9d2ff';ctx.font='12px '+mono;ctx.textBaseline='top';
+    ctx.fillText(id,sx+10,sy-6);
+    ctx.fillStyle=mil?'#b8735a':'#5f86b8';ctx.font='10px '+mono;
+    ctx.fillText(mil?'NELLIS AFB':'RWY '+ap.rwyId,sx+10,sy+8);
+  }
+}
+function drawFighter(f){
+  const sx=cx+f.x*scale,sy=cy-f.y*scale;
+  const c=f.phase==='ESCORT'?'#ff4d4d':'#ff8a5c';
+  // vector line
+  const lead=f.gs/3600*60;
+  ctx.beginPath();ctx.moveTo(sx,sy);
+  ctx.lineTo(sx+Math.sin(R(f.hdg))*lead*scale,sy-Math.cos(R(f.hdg))*lead*scale);
+  ctx.strokeStyle=c;ctx.globalAlpha=.75;ctx.lineWidth=1;ctx.stroke();ctx.globalAlpha=1;
+  // chevron pointing along heading - military symbology, distinct from the
+  // filled squares used for civilian returns
+  ctx.save();ctx.translate(sx,sy);ctx.rotate(R(f.hdg));
+  ctx.beginPath();ctx.moveTo(0,-6);ctx.lineTo(5,5);ctx.lineTo(0,2);ctx.lineTo(-5,5);
+  ctx.closePath();ctx.fillStyle=c;ctx.fill();ctx.restore();
+  if(f.phase!=='ESCORT'){
+    ctx.beginPath();ctx.arc(sx,sy,9+3*Math.sin(simTime*7),0,7);
+    ctx.strokeStyle=c;ctx.globalAlpha=.5;ctx.lineWidth=1;ctx.stroke();ctx.globalAlpha=1;
+  }
+  const ox=13,oy=-14;
+  ctx.font='11px '+mono;ctx.textBaseline='top';ctx.fillStyle=c;
+  ctx.fillText(f.cs,sx+ox,sy+oy);
+  ctx.fillStyle=f.phase==='ESCORT'?'#ff8f8f':'#ffb499';
+  ctx.fillText(f.phase+' '+f.target.cs.trim(),sx+ox,sy+oy+13);
+  ctx.fillText('FL'+String(Math.round(f.alt/100)).padStart(3,'0')+
+    '  '+Math.round(f.gs)+'kt',sx+ox,sy+oy+26);
+  if(f.range!==undefined&&f.phase==='INTERCEPT')
+    ctx.fillText(f.range.toFixed(1)+' NM to tgt',sx+ox,sy+oy+39);
+}
+function drawFlowLanes(){
+  // Arrival and departure streams to the Phoenix gate, offset from each other
+  // the way parallel airways are.
+  const g=airports.KPHX;
+  const gx=cx+g.x*scale,gy=cy-g.y*scale;
+  [['KLAS','#25e08a'],['KVGT','#7db8ff']].forEach(([id,col])=>{
+    const f=airports[id],fx=cx+f.x*scale,fy=cy-f.y*scale;
+    const dx=gx-fx,dy=gy-fy,len=Math.hypot(dx,dy)||1,px=-dy/len,py=dx/len;
+    const off=LANE_OFFSET_NM*scale;
+    drawLane(fx+px*off,fy+py*off,gx+px*off,gy+py*off,col,1);   // outbound to PHX
+    drawLane(gx-px*off,gy-py*off,fx-px*off,fy-py*off,col,-1);  // inbound from PHX
+  });
+}
+function drawLane(x1,y1,x2,y2,color,dir){
+  ctx.save();
+  ctx.strokeStyle=color;ctx.globalAlpha=.22;ctx.lineWidth=1.4;
+  ctx.setLineDash([10,10]);ctx.lineDashOffset=-simTime*24*dir;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.setLineDash([]);ctx.globalAlpha=1;
+  const ang=Math.atan2(y2-y1,x2-x1);
+  ctx.translate(x2,y2);ctx.rotate(ang);
+  ctx.fillStyle=color;ctx.globalAlpha=.6;
+  ctx.beginPath();ctx.moveTo(-10,-4);ctx.lineTo(0,0);ctx.lineTo(-10,4);ctx.closePath();ctx.fill();
+  ctx.restore();
+}
+function drawSweep(){const rad=R(sweep);ctx.beginPath();ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.sin(rad)*RANGE_NM*scale,cy-Math.cos(rad)*RANGE_NM*scale);
+  ctx.strokeStyle='rgba(37,224,138,0.25)';ctx.lineWidth=1.5;ctx.stroke();}
+function drawRuler(){
+  const x0=24,y0=H-70,len=pxPerInch;
+  ctx.strokeStyle='#6f8a86';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x0+len,y0);
+  ctx.moveTo(x0,y0-5);ctx.lineTo(x0,y0+5);ctx.moveTo(x0+len,y0-5);ctx.lineTo(x0+len,y0+5);ctx.stroke();
+  ctx.fillStyle='#c8ffe6';ctx.font='11px '+mono;ctx.textBaseline='bottom';
+  ctx.fillText('1 IN (screen ruler)',x0,y0-8);
+  ctx.fillStyle='#8fd8bb';ctx.font='10px '+mono;ctx.textBaseline='top';
+  ctx.fillText('≈ '+(pxPerInch/scale).toFixed(1)+' NM',x0,y0+8);
+}
+const colr=p=>p.status==='conflict'?'#ff4d4d':p.status==='caution'?'#ffce4d':'#25e08a';
+function drawPrimaryReturn(p){
+  // true-position skin paint, independent of whatever position is being
+  // broadcast — for a legitimate target this sits right under its datablock
+  const tx=cx+p.x*scale,ty=cy-p.y*scale;
+  ctx.beginPath();ctx.arc(tx,ty,2,0,7);
+  ctx.fillStyle='rgba(37,224,138,0.4)';ctx.fill();
+}
+function drawPlane(p){
+  drawPrimaryReturn(p);
+  const rp=reportedPos(p),sx=cx+rp.x*scale,sy=cy-rp.y*scale,c=colr(p),gnd=p.phase==='GROUND';
+  if(!gnd){const lead=p.gs/3600*60;
+    ctx.beginPath();ctx.moveTo(sx,sy);
+    ctx.lineTo(sx+Math.sin(R(p.hdg))*lead*scale,sy-Math.cos(R(p.hdg))*lead*scale);
+    ctx.strokeStyle=c;ctx.lineWidth=1;ctx.globalAlpha=.9;ctx.stroke();ctx.globalAlpha=1;}
+  ctx.save();if(p.sel){ctx.shadowColor=c;ctx.shadowBlur=12;}
+  if(gnd){
+    const pulse=.4+.35*Math.sin(simTime*2.2);
+    ctx.strokeStyle='#ffce4d';ctx.globalAlpha=pulse;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(sx,sy,7,0,7);ctx.stroke();ctx.globalAlpha=1;
+    ctx.fillStyle='#ffce4d';ctx.save();ctx.translate(sx,sy);ctx.rotate(Math.PI/4);
+    ctx.fillRect(-3.5,-3.5,7,7);ctx.restore();
+  }else{
+    ctx.fillStyle=c;ctx.fillRect(sx-3.5,sy-3.5,7,7);
+  }
+  ctx.restore();
+  if(p.status==='conflict'){ctx.beginPath();ctx.arc(sx,sy,11+2*Math.sin(simTime*6),0,7);
+    ctx.strokeStyle='#ff4d4d';ctx.lineWidth=1.5;ctx.stroke();}
+  // Emergency squawk gets a hard-to-miss double ring, the way a real display
+  // shouts about 7500/7600/7700.
+  if(p.squawk===SQUAWK_HIJACK){
+    const r0=13+3*Math.sin(simTime*5);
+    ctx.strokeStyle='#ff2d2d';ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(sx,sy,r0,0,7);ctx.stroke();
+    ctx.globalAlpha=.55;ctx.beginPath();ctx.arc(sx,sy,r0+5,0,7);ctx.stroke();ctx.globalAlpha=1;
+    ctx.fillStyle='#ff2d2d';ctx.font='bold 10px '+mono;ctx.textBaseline='bottom';
+    ctx.fillText('HIJACK 7500',sx-32,sy-r0-6);
+  }
+  if(p.sel){ctx.beginPath();ctx.arc(sx,sy,10,0,7);ctx.strokeStyle=c;ctx.lineWidth=1;ctx.stroke();}
+  const rAlt=reportedAlt(p),rGs=reportedGs(p);
+  const ox=14,oy=-16,fl=Math.round(rAlt/100),tr=p.alt<p.tAlt?'↑':p.alt>p.tAlt?'↓':' ';
+  ctx.strokeStyle=gnd?'#ffce4d':c;ctx.globalAlpha=.5;ctx.beginPath();
+  ctx.moveTo(sx+4,sy-4);ctx.lineTo(sx+ox-2,sy+oy+6);ctx.stroke();ctx.globalAlpha=1;
+  ctx.font='12px '+mono;ctx.textBaseline='top';
+  ctx.fillStyle=gnd?'#ffce4d':(p.status==='ok'?'#c8ffe6':c);
+  ctx.fillText(p.cs.trim()+' ▸'+short(p.dest),sx+ox,sy+oy);
+  ctx.fillStyle=gnd?'#ffce4d':(p.status==='ok'?'#8fd8bb':c);
+  if(gnd){ctx.fillText('STATIONARY '+p.origin,sx+ox,sy+oy+14);
+    ctx.fillText('dep in '+Math.max(0,Math.ceil(p.groundT))+'s',sx+ox,sy+oy+28);
+    ctx.fillText('SQ '+p.squawk,sx+ox,sy+oy+42);}
+  else{
+    const jumped=altJumpImpossible(p);
+    if(jumped)ctx.fillStyle='#ff4d4d';
+    ctx.fillText('FL'+String(fl).padStart(3,'0')+tr+(p.auto?'':' *V*')+
+      (jumped?'  '+(p.lastAltJump>0?'+':'')+p.lastAltJump:''),sx+ox,sy+oy+14);
+    ctx.fillStyle=gnd?'#ffce4d':(p.status==='ok'?'#8fd8bb':c);
+    ctx.fillText(Math.round(rGs)+'  '+String(Math.round(p.hdg)).padStart(3,'0')+'°',sx+ox,sy+oy+28);
+    // Octal violation is a static tell; call it out right on the tag.
+    const badSq=!/^[0-7]{4}$/.test(p.squawk);
+    if(badSq&&p.squawk!==SQUAWK_HIJACK)ctx.fillStyle='#ff4d4d';
+    ctx.fillText('SQ '+p.squawk+(badSq&&p.squawk!==SQUAWK_HIJACK?' ⚠OCTAL':''),sx+ox,sy+oy+42);
+  }
+}
+function panels(){
+  const p=planes.find(x=>x.sel),sel=document.getElementById('sel'),cmd=document.getElementById('cmd');
+  if(!p){sel.style.display=cmd.style.display='none';return;}
+  sel.style.display=cmd.style.display='block';
+  document.getElementById('cmd-title').textContent='◉ '+p.cs.trim()+'  '+p.type;
+  document.getElementById('sel-cs').textContent=p.cs.trim();
+  document.getElementById('sel-sq').textContent=p.squawk;
+  document.getElementById('sel-rt').textContent=short(p.origin)+' ▸ '+short(p.dest);
+  document.getElementById('sel-ph').textContent=p.phase+(p.auto?'':' (vectored)');
+  document.getElementById('sel-alt').textContent=p.phase==='GROUND'?'on ground':
+    'FL'+String(Math.round(p.alt/100)).padStart(3,'0')+(p.alt<p.tAlt?' ↑':p.alt>p.tAlt?' ↓':'');
+  document.getElementById('sel-hdg').textContent=String(Math.round(p.hdg)).padStart(3,'0')+'°';
+  document.getElementById('sel-gs').textContent=Math.round(reportedGs(p))+' kt';
+
+  // Primary/secondary correlation - the one number that settles ghost vs real.
+  const rp=reportedPos(p),off=Math.hypot(rp.x-p.x,rp.y-p.y);
+  const corr=document.getElementById('sel-corr');
+  corr.textContent=off<0.05?'CORRELATED':off.toFixed(2)+' NM OFF';
+  corr.style.color=off<0.05?'var(--phosphor)':'var(--conflict)';
+
+  // Implied vertical rate. A fabricated step reads in the tens of thousands
+  // of feet per minute, which no aircraft can fly.
+  const vs=document.getElementById('sel-vs');
+  if(altJumpImpossible(p)){
+    vs.textContent='>'+Math.round(Math.abs(p.lastAltJump)*24/1000)+'k fpm ⚠';
+    vs.style.color='var(--conflict)';
+  }else{
+    const climbing=Math.abs(p.alt-p.tAlt)>50;
+    vs.textContent=climbing?(p.alt<p.tAlt?'+1800 fpm':'-1800 fpm'):'level';
+    vs.style.color='var(--ui)';
+  }
+}
+let last=performance.now();
+function loop(now){
+  const dtR=(now-last)/1000;last=now;
+  if(!paused){step(dtR*rate);sweep=(sweep+dtR*60)%360;}
+  ctx.clearRect(0,0,W,H);drawScope();drawSweep();drawFlowLanes();drawStrip();drawAirports();
+  planes.forEach(drawPlane);fighters.forEach(drawFighter);drawRuler();
+  document.getElementById('clock').textContent=(()=>{const s=Math.floor(simTime)%60,
+    m=Math.floor(simTime/60)%60,h=Math.floor(simTime/3600)%24,p=n=>String(n).padStart(2,'0');
+    return p(h)+':'+p(m)+':'+p(s);})();
+  const air=planes.filter(p=>p.phase!=='GROUND');
+  document.getElementById('count').textContent=air.length;
+  const tally=id=>{const inb=planes.filter(p=>p.dest===id&&p.phase!=='GROUND').length;
+    const dep=planes.filter(p=>p.origin===id&&(p.phase==='DEPARTING'||p.phase==='GROUND')).length;
+    return'↓'+inb+' ↑'+dep;};
+  document.getElementById('klas').textContent=tally('KLAS');
+  document.getElementById('kvgt').textContent=tally('KVGT');
+  document.getElementById('ground').textContent=planes.filter(p=>p.phase==='GROUND').length;
+  const conf=Math.ceil(air.filter(p=>p.status==='conflict').length/2);
+  document.getElementById('msg').textContent=conf?'⚠ CONFLICT ALERT — verify separation':'';
+  const nel=document.getElementById('nellis');
+  if(!fighters.length)nel.textContent='';
+  else{
+    const joined=fighters.filter(f=>f.phase==='ESCORT').length;
+    nel.textContent=joined>=fighters.length?'🛩 NELLIS — INTERCEPT COMPLETE, SHADOWING':
+      (simTime%1<0.5?'⚡ NELLIS ALERT FIVE AIRBORNE':'　NELLIS ALERT FIVE AIRBORNE');
+  }
+  panels();renderRequests();requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+setTimeout(()=>log('sys','⚠ SECTOR ADVISORY: 2 of 8 tracks may be spoofed ADS-B injections. Verify squawk codes, primary-return correlation, and radio contact before issuing clearances. See ☰ COMMANDS for details.'),700);
+
+/* ---------- voice clip preload ---------- */
+(function initRadio(){
+  if(typeof RADIO==='undefined'||typeof PHRASE==='undefined'){
+    log('sys','▸ radio engine not loaded — falling back to synthesized voice');return;
+  }
+  log('sys','▸ loading radio voice clips…');
+  RADIO.load(PHRASE.manifest(planes)).then(r=>{
+    if(r.loaded===0){
+      log('sys','▸ no voice clips loaded — using synthesized fallback (serve over http://, not file://)');
+    }else if(r.loaded<r.total){
+      log('sys','▸ radio voice ready — '+r.loaded+'/'+r.total+' clips (some missing)');
+    }else{
+      log('sys','📻 radio voice ready — '+r.loaded+' clips, two-voice comms live');
+    }
+  }).catch(e=>{
+    console.warn(e);log('sys','▸ voice clip load failed — using synthesized fallback');
+  });
+})();
+// Browsers hold the audio context suspended until a user gesture.
+addEventListener('pointerdown',function resumeAudio(){
+  try{const a=RADIO.getCtx();if(a.state==='suspended')a.resume();}catch(e){}
+  removeEventListener('pointerdown',resumeAudio);
+},{once:true});
+
+/* ---------- interaction ---------- */
+cv.addEventListener('click',e=>{let best=null,bd=18;
+  for(const p of planes){const rp=reportedPos(p),sx=cx+rp.x*scale,sy=cy-rp.y*scale,
+    d=Math.hypot(e.clientX-sx,e.clientY-sy);
+    if(d<bd){bd=d;best=p;}}
+  if(best&&best.sel)return; // already selected — don't re-log
+  planes.forEach(p=>p.sel=false);if(best){best.sel=true;log('sys','▸ '+best.cs.trim()+' selected');}});
+document.querySelectorAll('#cmd button').forEach(b=>b.onclick=()=>{
+  const p=planes.find(x=>x.sel);if(p)command(p,b.dataset.a);});
+// Click a pending request to issue the clearance; the panel is rebuilt every
+// frame, so the handler is delegated rather than bound per entry.
+document.getElementById('req-panel').addEventListener('click',e=>{
+  const card=e.target.closest('.req');if(!card)return;
+  const r=requests.find(x=>x.id===+card.dataset.id);
+  if(r){planes.forEach(p=>p.sel=false);r.plane.sel=true;}
+  answerRequest(+card.dataset.id);
+});
+const pb=document.getElementById('pause');
+pb.onclick=()=>{paused=!paused;pb.textContent=paused?'▶ RESUME':'⏸ PAUSE';pb.classList.toggle('on',paused);};
+const sr=(r,id)=>{rate=r;['s1','s2','s4'].forEach(x=>document.getElementById(x).classList.toggle('on',x===id));};
+s1.onclick=()=>sr(1,'s1');s2.onclick=()=>sr(2,'s2');s4.onclick=()=>sr(4,'s4');
+const vb=document.getElementById('voice');
+vb.onclick=()=>{voiceOn=!voiceOn;vb.textContent=voiceOn?'🔊 VOICE ON':'🔇 VOICE OFF';
+  vb.classList.toggle('on',voiceOn);
+  if(typeof RADIO!=='undefined')RADIO.setEnabled(voiceOn);
+  if(!voiceOn)speechSynthesis.cancel();};
+const helpBtn=document.getElementById('helpbtn'),helpPanel=document.getElementById('help-panel');
+const toggleHelp=show=>{helpPanel.style.display=show?'block':'none';helpBtn.classList.toggle('on',show);};
+helpBtn.onclick=()=>toggleHelp(helpPanel.style.display!=='block');
+document.getElementById('help-close').onclick=()=>toggleHelp(false);
+addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault();pb.click();}
+  if(e.code==='KeyT'&&!e.repeat){e.preventDefault();startListening();}
+});
+addEventListener('keyup',e=>{if(e.code==='KeyT'){stopListening();}});
+</script>
+</body>
+</html>

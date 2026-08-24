@@ -1,0 +1,13 @@
+Zero. <break time="1.5s" />
+One. <break time="1.5s" />
+Two. <break time="1.5s" />
+Three. <break time="1.5s" />
+Four. <break time="1.5s" />
+Five. <break time="1.5s" />
+Six. <break time="1.5s" />
+Seven. <break time="1.5s" />
+Eight. <break time="1.5s" />
+Niner. <break time="1.5s" />
+Thousand. <break time="1.5s" />
+Hundred. <break time="1.5s" />
+Flight level. <break time="1.5s" />

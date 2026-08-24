@@ -1,0 +1,11 @@
+# Source recordings from ElevenLabs. These are the raw multi-phrase takes the
+# splitter cuts up; only the resulting clips/ are needed to run the sim, and
+# raw/ is ~17MB of audio that would bloat the repo for no benefit.
+voice/raw/
+
+# Local server scratch
+serve.log
+serve.err
+
+__pycache__/
+*.pyc
