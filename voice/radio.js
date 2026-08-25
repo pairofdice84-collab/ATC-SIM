@@ -260,6 +260,84 @@ const RADIO = (function () {
     return new Promise((r) => setTimeout(r, (end - a.currentTime + 0.15) * 1000));
   }
 
+  /* ---- ambient frequency ----
+     A live sector is never silent: there is a carrier floor, and other
+     controllers working adjacent sectors bleed through. The bleed-through is
+     built by replaying real clips through a deliberately destroyed chain -
+     narrow band, heavy drive, low level - so it reads as somebody talking
+     just out of intelligibility rather than as recognisable words. */
+  let ambient = null;
+
+  function startAmbient() {
+    if (ambient || !ready) return;
+    const a = getCtx();
+    if (a.state === 'suspended') a.resume();
+
+    const floor = a.createBufferSource();
+    floor.buffer = noiseBuffer;
+    floor.loop = true;
+    const bp = a.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 0.7;
+    const g = a.createGain();
+    g.gain.value = 0.011;
+    floor.connect(bp).connect(g).connect(a.destination);
+    floor.start();
+
+    ambient = { floor, gain: g, timer: null };
+    scheduleBleed();
+  }
+
+  function scheduleBleed() {
+    if (!ambient) return;
+    ambient.timer = setTimeout(() => {
+      if (!ambient) return;
+      playBleed();
+      scheduleBleed();
+    }, 6000 + Math.random() * 14000);
+  }
+
+  /** One distant, unintelligible transmission from an adjacent sector. */
+  function playBleed() {
+    const a = getCtx();
+    const voices = Object.keys(clips).filter((v) => Object.keys(clips[v]).length);
+    if (!voices.length) return;
+    const voice = voices[Math.floor(Math.random() * voices.length)];
+    const names = Object.keys(clips[voice]);
+
+    const hp = a.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 900;
+    const lp = a.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 1700;   // squeezed to a slot
+    const shaper = a.createWaveShaper();
+    shaper.curve = softClipCurve(6);                  // driven into mush
+    const g = a.createGain();
+    g.gain.value = 0.05 + Math.random() * 0.04;
+    hp.connect(lp).connect(shaper).connect(g).connect(a.destination);
+
+    let t = a.currentTime + 0.02;
+    squelch(a, t, g);
+    t += 0.06;
+    const words = 2 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < words; i++) {
+      const buf = clips[voice][names[Math.floor(Math.random() * names.length)]];
+      if (!buf) continue;
+      const src = a.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.value = 0.9 + Math.random() * 0.25;
+      src.connect(hp);
+      src.start(t);
+      t += buf.duration / src.playbackRate.value + 0.04;
+    }
+    squelch(a, t + 0.05, g);
+  }
+
+  function stopAmbient() {
+    if (!ambient) return;
+    clearTimeout(ambient.timer);
+    try { ambient.gain.gain.value = 0; ambient.floor.stop(); } catch (e) { /* gone */ }
+    ambient = null;
+  }
+
   /**
    * Adjust delivery live, e.g. RADIO.setTiming({unitGap: 0.24}).
    * rate below 1.0 slows the words themselves but also drops pitch, so
@@ -277,6 +355,9 @@ const RADIO = (function () {
     getCtx,
     setTiming,
     getTiming: () => ({ ...timing }),
+    startAmbient,
+    stopAmbient,
+    isAmbientOn: () => Boolean(ambient),
     isReady: () => ready,
     setEnabled: (v) => { enabled = v; },
     isEnabled: () => enabled,

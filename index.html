@@ -23,12 +23,39 @@
   .brand{color:var(--tag);font-weight:600;letter-spacing:.22em;margin-right:8px}
   #ctl{position:fixed;bottom:0;left:0;right:0;display:flex;gap:8px;align-items:center;
     padding:12px 16px;background:linear-gradient(#05090c00,#05090cee);z-index:5;flex-wrap:wrap}
-  button{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--tag);
-    background:#0c1a18;border:1px solid var(--phosphor-dim);border-radius:6px;
-    padding:7px 11px;cursor:pointer;transition:.12s}
-  button:hover{border-color:var(--phosphor);color:var(--phosphor)}
-  button.on{background:var(--phosphor);color:#04120c;border-color:var(--phosphor)}
+  /* Physical console keys: raised cap, bevelled edge, and a real travel on
+     press rather than a flat web button. */
+  button{font-family:var(--mono);font-size:11.5px;font-weight:600;
+    letter-spacing:.07em;color:#b9d8cd;cursor:pointer;
+    padding:8px 13px;border-radius:5px;
+    background:linear-gradient(#16302a 0%,#0e211d 52%,#0a1815 100%);
+    border:1px solid #06100e;
+    border-top-color:#2c5a4d;border-left-color:#1e463c;
+    box-shadow:inset 0 1px 0 #3a7263, inset 0 -2px 3px #050c0a,
+               0 2px 0 #05100d, 0 3px 5px rgba(0,0,0,.55);
+    text-shadow:0 -1px 0 #04100c;
+    transition:transform .05s, box-shadow .05s, color .12s}
+  button:hover{color:var(--phosphor);
+    box-shadow:inset 0 1px 0 #478975, inset 0 -2px 3px #050c0a,
+               0 2px 0 #05100d, 0 3px 7px rgba(37,224,138,.22)}
+  button:active{transform:translateY(2px);
+    background:linear-gradient(#0a1815 0%,#0e211d 100%);
+    box-shadow:inset 0 2px 4px #040b09, 0 0 0 #05100d}
+  /* Lit key - backlit legend, the way an illuminated console switch reads. */
+  button.on{color:#04120c;
+    background:linear-gradient(#4dffab 0%,#25e08a 55%,#17b06a 100%);
+    border-color:#0d5c3a;border-top-color:#7dffc4;
+    text-shadow:0 1px 0 rgba(255,255,255,.35);
+    box-shadow:inset 0 1px 0 #a5ffd8, inset 0 -2px 3px #0e7d4d,
+               0 2px 0 #05100d, 0 0 14px rgba(37,224,138,.5)}
   button:focus-visible{outline:2px solid var(--phosphor);outline-offset:2px}
+  /* Status lamp inside a key. */
+  .lamp{display:inline-block;width:7px;height:7px;border-radius:50%;
+    margin-right:7px;vertical-align:middle;background:#123028;
+    box-shadow:inset 0 1px 1px #000;transition:.15s}
+  button.on .lamp{background:#0a2f1c;box-shadow:inset 0 1px 1px rgba(0,0,0,.5)}
+  .lamp.red{background:#5a1414}
+  button.on .lamp.red{background:#ff4d4d;box-shadow:0 0 8px #ff4d4d}
   .sp{flex:1}.hint{color:var(--ui);font-size:11px}
   #cmd{position:fixed;left:16px;bottom:60px;width:230px;padding:12px;z-index:6;
     background:#081513f2;border:1px solid var(--phosphor-dim);border-radius:8px;display:none}
@@ -80,6 +107,22 @@
   .req-bar{height:3px;background:#0b241b;border-radius:2px;overflow:hidden}
   .req-bar i{display:block;height:100%;background:var(--phosphor);transition:width .3s linear}
   .req-none{color:var(--ui);font-style:italic}
+  /* Push-to-talk: the biggest key on the panel, held down like a real
+     transmit bar rather than clicked. */
+  #ptt{font-size:12.5px;padding:10px 20px;color:#ffd9d9;
+    background:linear-gradient(#4a1a1a 0%,#341212 52%,#260d0d 100%);
+    border-color:#150606;border-top-color:#8a3535;border-left-color:#6d2a2a;
+    box-shadow:inset 0 1px 0 #a34848, inset 0 -2px 3px #0d0404,
+               0 3px 0 #1a0707, 0 4px 7px rgba(0,0,0,.6)}
+  #ptt:hover{color:#fff;box-shadow:inset 0 1px 0 #c25a5a,
+    inset 0 -2px 3px #0d0404, 0 3px 0 #1a0707, 0 4px 10px rgba(255,77,77,.3)}
+  #ptt.tx{transform:translateY(3px);color:#fff;
+    background:linear-gradient(#ff5c5c 0%,#e02d2d 60%,#a81f1f 100%);
+    border-top-color:#ff9c9c;
+    box-shadow:inset 0 2px 5px #6d0f0f, 0 0 22px rgba(255,77,77,.75);
+    animation:txpulse .8s ease-in-out infinite}
+  @keyframes txpulse{0%,100%{box-shadow:inset 0 2px 5px #6d0f0f,0 0 22px rgba(255,77,77,.75)}
+    50%{box-shadow:inset 0 2px 5px #6d0f0f,0 0 34px rgba(255,77,77,1)}}
 </style>
 </head>
 <body>
@@ -98,6 +141,7 @@
   <span>FALSE POS <b id="falsepos" style="color:var(--caution)">0</b></span>
   <span id="win" style="color:var(--phosphor);font-weight:600"></span>
   <span id="nellis" style="color:#ff8a5c;font-weight:600"></span>
+  <span id="phx" style="color:#c3b5f0;font-weight:600"></span>
   <span id="msg" style="color:var(--conflict)"></span>
 </div>
 
@@ -113,14 +157,19 @@
   <h4>KEYBOARD</h4>
   <div class="row"><span>SPACE</span><span>pause / resume sim</span></div>
   <div class="row"><span>1× / 2× / 4×</span><span>simulation speed</span></div>
-  <div class="row"><span>HOLD T</span><span>push-to-talk (voice, WIP)</span></div>
+  <div class="row"><span>HOLD T / PTT bar</span><span>push-to-talk</span></div>
   <div class="row"><span>CLICK TARGET</span><span>select an aircraft</span></div>
+  <div class="row"><span>CHATTER</span><span>adjacent-sector traffic</span></div>
   <h4>TARGET COMMANDS</h4>
   <div class="row"><span>SAY ALTITUDE / STATUS</span><span>altitude &amp; intentions</span></div>
   <div class="row"><span>CLIMB</span><span>+2000 ft</span></div>
   <div class="row"><span>DESCEND</span><span>−2000 ft</span></div>
   <div class="row"><span>TURN L / TURN R</span><span>30° vector</span></div>
+  <div class="row"><span>LAND KLAS / KVGT</span><span>divert to a field</span></div>
   <div class="row"><span>RESUME OWN NAV</span><span>cancel vectors</span></div>
+  <div class="note">Diverting is how you clear the airspace: put arrivals on
+    the ground at Harry Reid or North Las Vegas and you get them out from in
+    front of a deviating aircraft.</div>
   <h4>VOICE PHRASES <span style="color:var(--caution)">(WIP)</span></h4>
   <div class="ex">"United four eight two, climb"</div>
   <div class="ex">"Southwest seven five five, turn left"</div>
@@ -222,6 +271,8 @@
     <button data-a="descend">DESCEND −2000</button>
     <button data-a="left">TURN L 30°</button>
     <button data-a="right">TURN R 30°</button>
+    <button data-a="divert_klas">⤓ LAND KLAS</button>
+    <button data-a="divert_kvgt">⤓ LAND KVGT</button>
     <button data-a="resume" class="full">↺ RESUME OWN NAV</button>
     <button data-a="flag" class="full" style="border-color:var(--caution);color:var(--caution)">👻 FLAG AS SPOOFED</button>
     <button data-a="hijack" class="full" style="border-color:var(--conflict);color:var(--conflict)">🆘 DECLARE HIJACK</button>
@@ -233,10 +284,12 @@
 <div id="ctl">
   <button id="pause">⏸ PAUSE</button>
   <button id="s1" class="on">1×</button><button id="s2">2×</button><button id="s4">4×</button>
-  <button id="voice" class="on">🔊 VOICE ON</button>
+  <button id="voice" class="on"><i class="lamp"></i>VOICE</button>
+  <button id="chatter" class="on"><i class="lamp"></i>CHATTER</button>
   <button id="helpbtn">☰ COMMANDS</button>
+  <button id="ptt" title="Hold to transmit (or hold the T key)"><i class="lamp red"></i>🎙 PUSH TO TALK</button>
   <span class="sp"></span>
-  <span class="hint">two fields live · traffic flows KLAS ⇄ KVGT · click a target to vector it · hold T to talk to ATC</span>
+  <span class="hint">hold the PTT bar or the <b>T</b> key to transmit · click a target to work it</span>
 </div>
 
 <script src="voice/radio.js"></script>
@@ -406,6 +459,7 @@ function altJumpImpossible(p){
 
 /* ---- hijack timeline ---- */
 const HJ_ODD_AT=50, HJ_SQUAWK_AT=95, HJ_TURN_AT=105;
+let askedReal=false, phxNotified=false;
 function stepHijack(){
   const p=hijackPlane;if(!p||p.phase==='GROUND')return;
   if(p.hjStage===0&&simTime>=HJ_ODD_AT){
@@ -418,6 +472,23 @@ function stepHijack(){
     klaxon();
     log('sys','🆘 SQUAWK 7500 — '+p.cs.trim()+' IS BROADCASTING THE HIJACK CODE. Primary return correlates: this is a REAL aircraft.');
     document.getElementById('msg').textContent='🆘 HIJACK CODE 7500 — '+p.cs.trim();
+  }
+  // Somebody else on frequency heard the 7500 go out and wants to know if it
+  // is an exercise. Controllers get asked this; the answer sets the tone.
+  if(p.hjStage>=2&&!askedReal&&simTime>=HJ_SQUAWK_AT+14){
+    askedReal=true;
+    const witness=planes.find(x=>x!==p&&!isNordo(x)&&x.phase!=='GROUND');
+    if(witness){
+      log('plt','↳ '+witness.cs.trim()+': "Approach, '+witness.cs.trim()+
+        '… we monitored that. Is this a real-world event, or are you running an exercise?"');
+      setTimeout(()=>{
+        log('atc','"All aircraft, Las Vegas Approach — this is a REAL-WORLD EVENT. '+
+          'Not an exercise. Expect delays and re-routes. Stand by for instructions."');
+        if(voiceOn&&typeof speak==='function')
+          speak('All aircraft, Las Vegas Approach. This is a real world event. Not an exercise. '+
+                'Expect delays and re-routes.');
+      },2600);
+    }
   }
   if(p.hjStage===2&&simTime>=HJ_TURN_AT){
     p.hjStage=3;
@@ -551,6 +622,30 @@ function nellisSay(key,text){
   return new Promise(r=>setTimeout(r,text.length*52));
 }
 
+/** Coordinate with the facility that handed the aircraft over. Phoenix owned
+    this flight before we did, so they get told first and they hold the rest
+    of the departure bank on the ground. */
+function notifyPhoenix(p){
+  if(phxNotified)return;phxNotified=true;
+  setTimeout(()=>{
+    log('atc','"Phoenix Center, Las Vegas Approach — '+p.cs.trim()+
+      ' off your gate is squawking seven five zero zero, NORDO, deviating. '+
+      'Nellis is launching. Hold your Vegas departures on the ground."');
+    if(voiceOn&&typeof speak==='function')
+      speak('Phoenix Center, Las Vegas Approach. '+csWords(p)+
+            ' is squawking seven five zero zero, NORDO and deviating. '+
+            'Nellis is launching. Hold your Vegas departures.');
+  },1400);
+  setTimeout(()=>{
+    log('sys','◈ PHOENIX CENTER: "Las Vegas, Phoenix. Copy all. We are stopping '+
+      'departures for your airspace and rolling the tapes. Landline is open."');
+    // Phoenix stops feeding the sector while the emergency runs.
+    phxHold=true;
+    document.getElementById('phx').textContent='⛔ PHX DEPARTURES HELD';
+  },7000);
+}
+let phxHold=false;
+
 function scrambleNellis(target){
   if(scrambled.has(target.cs))return;
   scrambled.add(target.cs);
@@ -678,6 +773,13 @@ function step(dt){
     // handed to the next centre, then re-enter later as an inbound so the
     // sector keeps a steady bank of traffic.
     if(isGate(p.dest)&&dD<2.5){
+      if(phxHold){
+        // Phoenix has stopped departures for our airspace, so nothing new
+        // comes back through the gate while the emergency is running.
+        log('sys','▸ '+p.cs.trim()+' handed to Phoenix Center — not returning, departures held');
+        p.parked=true;p.phase='GROUND';p.groundT=1e9;p.origin='KPHX';
+        continue;
+      }
       log('sys','▸ '+p.cs.trim()+' handed off to Phoenix Center — leaving radar cover');
       p.origin='KPHX';p.dest=Math.random()<0.5?'KLAS':'KVGT';
       const g=airports.KPHX;
@@ -829,6 +931,7 @@ function handleHijack(p){
     log('sys','🆘 HIJACK DECLARED — '+p.cs.trim()+', squawk '+p.squawk+
         ', NORDO, deviating toward LAS VEGAS BLVD. Real aircraft, real emergency.');
     setTimeout(()=>scrambleNellis(p),600);
+    notifyPhoenix(p);
     scoreThreat();
   }else if(isSpoof(p)){
     misclassify(p,'no aircraft exists there — the primary return does not correlate. '+
@@ -869,9 +972,35 @@ function handleGhostResponse(p,a){
   }
 }
 
+/** Send an aircraft to a field to land - used to clear airspace around the
+    emergency, or just to get an arrival on the ground. */
+function divert(p,fieldId){
+  const f=airports[fieldId];
+  p.auto=true;p.origin=p.origin===fieldId?p.origin:p.origin;
+  p.dest=fieldId;
+  p.phase=dist(p,f)<APPROACH_NM?'ARRIVING':'ENROUTE';
+  p.tHdg=bearing(p,f);
+  log('atc','"'+p.cs.trim()+', proceed direct '+fieldId+', cleared to land runway '+f.rwyId+'."');
+  const seq=radioLive()&&!txBusy?['cs_'+p.cs.trim()]:null;
+  if(seq&&!isNordo(p)){
+    txBusy=true;
+    RADIO.transmit('atc',seq.concat(['turn_l'],PHRASE.headingClips(p.tHdg)))
+      .then(()=>new Promise(r=>setTimeout(r,380)))
+      .then(()=>{log('plt','↳ Direct '+fieldId+', cleared to land, '+csWords(p));
+        return RADIO.transmit('pilot',PHRASE.headingClips(p.tHdg).concat(['cs_'+p.cs.trim()]));})
+      .catch(e=>console.warn(e)).finally(()=>{txBusy=false;});
+  }else{
+    setTimeout(()=>log('plt','↳ Direct '+fieldId+', cleared to land, '+p.cs.trim()),450);
+  }
+}
+
 function command(p,a){
   if(a==='flag'){handleFlag(p);return;}
   if(a==='hijack'){handleHijack(p);return;}
+  if(a==='divert_klas'||a==='divert_kvgt'){
+    if(isNordo(p)){handleGhostResponse(p,'query');return;}
+    divert(p,a==='divert_klas'?'KLAS':'KVGT');return;
+  }
   // A ghost never answers; a hijacked aircraft answers until it goes NORDO.
   if(isNordo(p)){handleGhostResponse(p,a);return;}
   if(a==='resume'){p.auto=true;log('sys','▸ '+p.cs.trim()+' resumed own navigation to '+p.dest);return;}
@@ -942,7 +1071,12 @@ let recognition=null,listening=false;
 const SRClass=window.SpeechRecognition||window.webkitSpeechRecognition;
 function micUI(active,text){const el=document.getElementById('mic');if(!el)return;
   el.style.display=active?'flex':'none';
-  if(text!==undefined)document.getElementById('mic-text').textContent=text;}
+  if(text!==undefined)document.getElementById('mic-text').textContent=text;
+  const b=document.getElementById('ptt');
+  if(b){b.classList.toggle('tx',active);b.querySelector('.lamp').classList.toggle('on',active);}
+  const l=document.querySelector('#ptt .lamp');
+  if(l)l.style.boxShadow=active?'0 0 8px #ff4d4d':'';
+  if(b)b.classList.toggle('on',active);}
 function handleVoiceCommand(transcript){
   log('sys','🎙 heard: "'+transcript+'"');
   const target=findPlaneByVoice(transcript)||planes.find(x=>x.sel);
@@ -1259,7 +1393,12 @@ setTimeout(()=>log('sys','⚠ SECTOR ADVISORY: 2 of 8 tracks may be spoofed ADS-
 })();
 // Browsers hold the audio context suspended until a user gesture.
 addEventListener('pointerdown',function resumeAudio(){
-  try{const a=RADIO.getCtx();if(a.state==='suspended')a.resume();}catch(e){}
+  try{
+    const a=RADIO.getCtx();if(a.state==='suspended')a.resume();
+    // Browsers will not start audio before a gesture, so the ambient bed
+    // comes up on the first interaction rather than at load.
+    if(chatterOn&&RADIO.isReady()&&!RADIO.isAmbientOn())RADIO.startAmbient();
+  }catch(e){}
   removeEventListener('pointerdown',resumeAudio);
 },{once:true});
 
@@ -1298,6 +1437,22 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyT'&&!e.repeat){e.preventDefault();startListening();}
 });
 addEventListener('keyup',e=>{if(e.code==='KeyT'){stopListening();}});
+
+/* PTT bar - press and hold, same contract as the T key. Pointer events cover
+   mouse and touch, and the window-level release catches a drag-off. */
+const pttBtn=document.getElementById('ptt');
+pttBtn.addEventListener('pointerdown',e=>{e.preventDefault();startListening();});
+addEventListener('pointerup',()=>{if(listening)stopListening();});
+pttBtn.addEventListener('contextmenu',e=>e.preventDefault());
+
+/* Ambient frequency chatter. */
+const chBtn=document.getElementById('chatter');
+let chatterOn=true;
+chBtn.onclick=()=>{
+  chatterOn=!chatterOn;chBtn.classList.toggle('on',chatterOn);
+  if(typeof RADIO==='undefined')return;
+  chatterOn?RADIO.startAmbient():RADIO.stopAmbient();
+};
 </script>
 </body>
 </html>
