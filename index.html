@@ -123,6 +123,45 @@
     animation:txpulse .8s ease-in-out infinite}
   @keyframes txpulse{0%,100%{box-shadow:inset 0 2px 5px #6d0f0f,0 0 22px rgba(255,77,77,.75)}
     50%{box-shadow:inset 0 2px 5px #6d0f0f,0 0 34px rgba(255,77,77,1)}}
+  /* ---- pre-mission briefing ---- */
+  #brief{position:fixed;inset:0;z-index:50;display:flex;align-items:center;
+    justify-content:center;padding:24px;overflow:auto;
+    background:radial-gradient(circle at 50% 40%,#08201a 0%,#040b09 70%,#020505 100%)}
+  #brief-card{width:min(780px,100%);max-height:92vh;overflow:auto;padding:26px 30px;
+    background:linear-gradient(#0a1714,#07100e);
+    border:1px solid var(--phosphor-dim);border-radius:12px;
+    box-shadow:0 0 60px rgba(37,224,138,.09),inset 0 1px 0 #1d4a3c}
+  #brief h1{margin:0 0 2px;color:var(--phosphor);font-size:23px;letter-spacing:.3em}
+  #brief .sub{color:var(--ui);font-size:11.5px;letter-spacing:.22em;margin-bottom:20px}
+  #brief h3{color:var(--tag);font-size:12px;letter-spacing:.16em;margin:20px 0 8px;
+    padding-bottom:5px;border-bottom:1px solid #14352b}
+  #brief p{margin:0 0 9px;font-size:12.5px;line-height:1.75;color:#a9c9bd}
+  #brief b{color:var(--tag)}
+  #brief .warn{color:var(--conflict);font-weight:600}
+  #brief .good{color:var(--phosphor)}
+  #brief .cau{color:var(--caution)}
+  #brief .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:640px){#brief .cols{grid-template-columns:1fr}}
+  #brief table{width:100%;border-collapse:collapse;font-size:11.5px;margin:6px 0 4px}
+  #brief td{padding:5px 8px;border-bottom:1px solid #102a22;color:#9fbfb3;vertical-align:top}
+  #brief td:first-child{color:var(--tag);white-space:nowrap;width:42%}
+  #brief .keycap{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10.5px;
+    background:#12261f;border:1px solid #24513f;border-bottom-width:2px;color:#bfe6d5}
+  #brief-go{display:block;width:100%;margin-top:24px;padding:15px;font-size:15px;
+    letter-spacing:.26em}
+  #brief .foot{color:var(--ui);font-size:11px;margin-top:12px;text-align:center}
+  /* ---- end-of-mission banner ---- */
+  #outcome{position:fixed;inset:0;z-index:60;display:none;align-items:center;
+    justify-content:center;padding:24px;background:rgba(2,5,5,.9)}
+  #outcome-card{width:min(560px,100%);padding:30px 34px;border-radius:12px;text-align:center;
+    background:linear-gradient(#0a1714,#07100e);border:2px solid var(--phosphor)}
+  #outcome-card.fail{border-color:var(--conflict)}
+  #outcome h2{margin:0 0 6px;font-size:26px;letter-spacing:.2em;color:var(--phosphor)}
+  #outcome-card.fail h2{color:var(--conflict)}
+  #outcome .detail{color:#a9c9bd;font-size:12.5px;line-height:1.8;margin:14px 0 6px;text-align:left}
+  #outcome .stat{display:flex;justify-content:space-between;padding:4px 0;
+    border-bottom:1px solid #102a22;font-size:12px}
+  #outcome .stat span:first-child{color:var(--ui)}
 </style>
 </head>
 <body>
@@ -142,8 +181,95 @@
   <span id="win" style="color:var(--phosphor);font-weight:600"></span>
   <span id="nellis" style="color:#ff8a5c;font-weight:600"></span>
   <span id="phx" style="color:#c3b5f0;font-weight:600"></span>
+  <span id="striprange" style="font-weight:600"></span>
   <span id="msg" style="color:var(--conflict)"></span>
 </div>
+
+<div id="brief">
+ <div id="brief-card">
+  <h1>APPROACH</h1>
+  <div class="sub">LAS VEGAS TRACON · POSITION RELIEF BRIEFING</div>
+
+  <p>You have the sector. Eight aircraft working between <b>Harry Reid (KLAS)</b>,
+  <b>North Las Vegas (KVGT)</b> and the <b>Phoenix gate (KPHX)</b>.</p>
+
+  <p>Intelligence passed a warning at shift change: someone is transmitting
+  <b>fabricated ADS-B</b> into this airspace. ADS-B has no authentication —
+  any transmitter can broadcast any position under any identity, and every
+  receiver displays it as fact. <span class="warn">One of your targets does not
+  exist.</span></p>
+
+  <p>Separately, and unrelated: <span class="warn">one of your real aircraft is
+  going to be taken.</span> Both will look wrong. They are not the same problem,
+  and the response to each is different.</p>
+
+  <h3>THE ONE RULE</h3>
+  <p><b class="good">A spoof breaks physics. A hijack breaks the clearance.</b></p>
+  <p>Altitude, speed and identity are all <b>Mode C</b> — reported by the
+  aircraft's own transponder, therefore forgeable. <b>Primary radar</b> paints
+  the airframe's skin and reports position only. It cannot be faked. When the
+  datablock and the primary return disagree, believe the radar.</p>
+
+  <div class="cols">
+   <div>
+    <h3>👻 GHOST — CYBER ATTACK</h3>
+    <table>
+     <tr><td>PRIMARY</td><td class="warn">x.xx NM OFF</td></tr>
+     <tr><td>VERT RATE</td><td class="warn">&gt;40k fpm — impossible</td></tr>
+     <tr><td>Altitude</td><td>steps thousands of ft between sweeps</td></tr>
+     <tr><td>Squawk</td><td>⚠OCTAL (8/9) or duplicated</td></tr>
+     <tr><td>Radio</td><td>dead air, always</td></tr>
+     <tr><td>Action</td><td class="cau">👻 FLAG AS SPOOFED</td></tr>
+    </table>
+    <p>Flagging it broadcasts a warning so the rest of your traffic stops
+    manoeuvring around an aircraft that was never there.</p>
+   </div>
+   <div>
+    <h3>🆘 HIJACK — REAL AIRCRAFT</h3>
+    <table>
+     <tr><td>PRIMARY</td><td class="good">CORRELATED</td></tr>
+     <tr><td>VERT RATE</td><td>normal — physics hold</td></tr>
+     <tr><td>Altitude</td><td>smooth, plausible</td></tr>
+     <tr><td>Squawk</td><td>valid → then <b class="warn">7500</b></td></tr>
+     <tr><td>Radio</td><td>talks, then goes NORDO</td></tr>
+     <tr><td>Action</td><td class="warn">🆘 DECLARE HIJACK</td></tr>
+    </table>
+    <p>Declaring scrambles the Nellis alert flight and puts Phoenix Center on
+    the landline.</p>
+   </div>
+  </div>
+
+  <h3>⚠ WHAT YOU ARE PROTECTING</h3>
+  <p><b>LAS VEGAS BLVD is marked on your scope.</b> The hijacked aircraft will
+  turn for it and descend. <span class="warn">If it reaches the Strip, you have
+  failed.</span></p>
+  <p>Fighters alone will not stop it — they can only shadow. Once VIPER flight
+  is joined in formation, <b class="cau">🛩 NELLIS: DIVERT TARGET</b> unlocks.
+  That is the order that turns the aircraft away and walks it back to Nellis.
+  <b>That button is how you win.</b></p>
+
+  <h3>CONTROLS</h3>
+  <table>
+   <tr><td><span class="keycap">CLICK</span> a target</td><td>select it and open the command panel</td></tr>
+   <tr><td><span class="keycap">T</span> or the PTT bar</td><td>push-to-talk — say a callsign and a command</td></tr>
+   <tr><td><span class="keycap">SPACE</span></td><td>pause</td></tr>
+   <tr><td>1× / 2× / 4×</td><td>time compression</td></tr>
+   <tr><td>📋 request cards</td><td>click to issue the clearance before the bar runs out</td></tr>
+   <tr><td>⤓ LAND KLAS / KVGT</td><td>divert traffic to a field to clear the airspace</td></tr>
+   <tr><td>☰ COMMANDS</td><td>this briefing again, any time</td></tr>
+  </table>
+
+  <p class="foot">Traffic keeps calling while all of this happens. That is the job.</p>
+
+  <button id="brief-go" class="on">◉ READY — TAKE THE POSITION</button>
+ </div>
+</div>
+
+<div id="outcome"><div id="outcome-card">
+  <h2 id="outcome-title">—</h2>
+  <div id="outcome-detail" class="detail"></div>
+  <button id="outcome-again" style="width:100%;margin-top:16px;padding:12px">↺ RUN IT AGAIN</button>
+</div></div>
 
 <div id="mic">🎙 <span id="mic-text">LISTENING…</span></div>
 
@@ -288,6 +414,7 @@
   <button id="chatter" class="on"><i class="lamp"></i>CHATTER</button>
   <button id="helpbtn">☰ COMMANDS</button>
   <button id="ptt" title="Hold to transmit (or hold the T key)"><i class="lamp red"></i>🎙 PUSH TO TALK</button>
+  <button id="divertbtn" style="display:none;border-color:var(--caution);color:var(--caution)">🛩 NELLIS: DIVERT TARGET</button>
   <span class="sp"></span>
   <span class="hint">hold the PTT bar or the <b>T</b> key to transmit · click a target to work it</span>
 </div>
@@ -458,8 +585,73 @@ function altJumpImpossible(p){
 }
 
 /* ---- hijack timeline ---- */
-const HJ_ODD_AT=50, HJ_SQUAWK_AT=95, HJ_TURN_AT=105;
+/* Timeline is jittered so the run is not memorised between attempts. */
+const HJ_ODD_AT=44+Math.random()*14, HJ_SQUAWK_AT=88+Math.random()*16;
+const HJ_TURN_AT=HJ_SQUAWK_AT+8+Math.random()*7;
 let askedReal=false, phxNotified=false;
+
+/* ---- mission state ---- */
+const STRIP_MID={x:(STRIP.x1+STRIP.x2)/2,y:(STRIP.y1+STRIP.y2)/2};
+const STRIP_BREACH_NM=2.2;   // inside this and the aircraft is over the Strip
+let mission='briefing';       // briefing | running | won | failed
+let stripWarned=0, divertOrdered=false;
+
+function stripRange(p){return Math.hypot(STRIP_MID.x-p.x,STRIP_MID.y-p.y);}
+
+function endMission(won,title,detail){
+  if(mission==='won'||mission==='failed')return;
+  mission=won?'won':'failed';
+  paused=true;
+  const card=document.getElementById('outcome-card');
+  card.classList.toggle('fail',!won);
+  document.getElementById('outcome-title').textContent=title;
+  document.getElementById('outcome-detail').innerHTML=detail+
+    '<div class="stat"><span>Threats resolved</span><span>'+idd+' / 2</span></div>'+
+    '<div class="stat"><span>Misidentifications</span><span>'+falsepos+'</span></div>'+
+    '<div class="stat"><span>Clearances issued</span><span>'+handledReq+'</span></div>'+
+    '<div class="stat"><span>Requests missed</span><span>'+missedReq+'</span></div>';
+  document.getElementById('outcome').style.display='flex';
+}
+
+/** Ordered by you, flown by the fighters: turn the target away from the city. */
+function nellisDivert(){
+  const t=hijackPlane;
+  if(!t||divertOrdered)return;
+  if(!fighters.length||!fighters.every(f=>f.phase==='ESCORT')){
+    log('sys','▸ VIPER flight is not joined yet — no one is close enough to turn him.');
+    return;
+  }
+  divertOrdered=true;
+  const k=airports.KLSV;
+  t.auto=false;t.nordo=true;
+  t.tHdg=(Math.atan2(k.x-t.x,k.y-t.y)*180/Math.PI+360)%360;
+  t.tAlt=Math.max(6000,t.alt);
+  t.gsTgt=250;
+  t.divertedToNellis=true;
+  log('sys','🛩 NELLIS DIVERT ORDERED — VIPER flight manoeuvring to turn '+t.cs.trim()+' off the city.');
+  (async()=>{
+    await nellisSay('cleared','Viper flight, cleared to intercept. Vectors on you now.');
+    await nellisSay('shadow','Nellis has the track. Viper flight in the block, shadowing.');
+    log('sys','◈ VIPER01: "He is turning. He is following us. Coming left, heading for Nellis."');
+  })();
+}
+
+/** Broadcast that a track was fabricated, so traffic stops avoiding a phantom. */
+function broadcastCyberAttack(p){
+  log('atc','"ALL AIRCRAFT, Las Vegas Approach — traffic previously called as '+
+    p.cs.trim()+' is a CONFIRMED FALSE TARGET. Fabricated ADS-B. '+
+    'There is NO AIRCRAFT at that position. Disregard TCAS advisories on that contact '+
+    'and do not manoeuvre for it. Report any further unverified traffic to this frequency."');
+  if(voiceOn&&typeof speak==='function')
+    speak('All aircraft, Las Vegas Approach. Traffic called as '+csWords(p)+
+      ' is a confirmed false target. Fabricated A D S B. There is no aircraft at that position. '+
+      'Disregard T CAS advisories on that contact.');
+  setTimeout(()=>{
+    const w=planes.find(x=>x!==p&&!isNordo(x)&&x.phase!=='GROUND');
+    if(w)log('plt','↳ '+w.cs.trim()+': "Approach, '+w.cs.trim()+
+      ' — copy, disregarding. We had a TA on that contact and it never resolved."');
+  },3200);
+}
 function stepHijack(){
   const p=hijackPlane;if(!p||p.phase==='GROUND')return;
   if(p.hjStage===0&&simTime>=HJ_ODD_AT){
@@ -498,14 +690,48 @@ function stepHijack(){
     p.tAlt=4000;p.gsTgt=Math.max(p.gsTgt,340);
     log('sys','⚠ '+p.cs.trim()+' DEVIATING — turning toward LAS VEGAS BLVD, descending. Declare the hijack.');
   }
-  if(p.hjStage===3){ // keep driving at the Strip
-    const mid={x:(STRIP.x1+STRIP.x2)/2,y:(STRIP.y1+STRIP.y2)/2};
-    p.tHdg=(Math.atan2(mid.x-p.x,mid.y-p.y)*180/Math.PI+360)%360;
+  if(p.hjStage===3&&!p.divertedToNellis){ // keep driving at the Strip
+    p.tHdg=(Math.atan2(STRIP_MID.x-p.x,STRIP_MID.y-p.y)*180/Math.PI+360)%360;
     p.tAlt=4000;
+  }
+
+  // Escalating proximity calls, then the fail state.
+  if(p.hjStage>=2&&mission==='running'){
+    const r=stripRange(p);
+    const marks=[12,8,5,3.2];
+    for(let i=0;i<marks.length;i++){
+      if(r<marks[i]&&stripWarned<=i){
+        stripWarned=i+1;
+        log('sys','⚠ '+p.cs.trim()+' is '+r.toFixed(1)+' NM FROM LAS VEGAS BLVD'+
+          (i>=2?' — RUNNING OUT OF TIME':''));
+        if(i>=2)klaxon();
+        break;
+      }
+    }
+    if(r<STRIP_BREACH_NM&&!p.divertedToNellis){
+      endMission(false,'⛔ MISSION FAILED',
+        '<p><b>'+p.cs.trim()+' reached Las Vegas Blvd.</b></p>'+
+        '<p>The aircraft was real and it was never turned. Fighters can shadow a '+
+        'hijack but they cannot stop one — the order to divert has to come from you, '+
+        'and it has to come before he is on top of the city.</p>');
+    }
+  }
+
+  // Diverted and clear of the city: the sector is safe.
+  if(p.divertedToNellis&&mission==='running'){
+    const d=dist(p,airports.KLSV);
+    if(d<4){
+      endMission(true,'🏆 SECTOR SECURED',
+        '<p><b>'+p.cs.trim()+' was turned off the city and recovered to Nellis '+
+        'under escort.</b></p><p>You separated a fabricated track from a real '+
+        'emergency, and you gave the divert order with room to spare. That is the '+
+        'whole job: the ghost wanted your attention, and the real one wanted your '+
+        'hesitation.</p>');
+    }
   }
 }
 
-let simTime=0,paused=false,rate=1,sweep=0;
+let simTime=0,paused=true,rate=1,sweep=0;   // held until the briefing is dismissed
 const CF_NM=3,CF_FT=1000,CA_NM=6,CA_FT=1200;
 
 /* ---- live traffic requests ----
@@ -710,6 +936,16 @@ function stepFighters(dt){
       if(f.range<ARRIVE_NM){
         f.phase='ESCORT';
         log('sys','🛩 '+f.cs+' JOINED — visual on '+t.cs.trim());
+        // Unlock the divert order here rather than in the render loop: it is
+        // the only way to win, so it must not depend on anything but the
+        // fighters actually being in position.
+        if(fighters.every(x=>x.phase==='ESCORT')&&!divertOrdered){
+          const b=document.getElementById('divertbtn');
+          if(b&&b.style.display==='none'){
+            b.style.display='';b.classList.add('on');
+            log('sys','🛩 VIPER flight is joined. NELLIS: DIVERT TARGET is available — use it.');
+          }
+        }
         if(f.slot===0){
           (async()=>{
             await nellisSay('tally','Viper Zero One, tally the target. Closing.');
@@ -915,6 +1151,7 @@ function handleFlag(p){
     p.flagged=true;idd++;
     log('sys','👻 '+p.cs.trim()+' CONFIRMED SPOOFED — squawk '+p.squawk+
         ' invalid/duplicated, no primary correlation, dead air throughout. Track deleted.');
+    setTimeout(()=>broadcastCyberAttack(p),900);
     scoreThreat();
   }else if(isHijack(p)){
     misclassify(p,'that is NOT a ghost. Primary radar correlates — there is a real aircraft there. Look again.');
@@ -1365,9 +1602,16 @@ function loop(now){
   if(!fighters.length)nel.textContent='';
   else{
     const joined=fighters.filter(f=>f.phase==='ESCORT').length;
-    nel.textContent=joined>=fighters.length?'🛩 NELLIS — INTERCEPT COMPLETE, SHADOWING':
+    nel.textContent=joined>=fighters.length?'🛩 NELLIS — JOINED, SHADOWING':
       (simTime%1<0.5?'⚡ NELLIS ALERT FIVE AIRBORNE':'　NELLIS ALERT FIVE AIRBORNE');
   }
+  // Live range to the thing you are protecting.
+  const sr=document.getElementById('striprange');
+  if(hijackPlane&&hijackPlane.hjStage>=2&&mission==='running'){
+    const r=stripRange(hijackPlane);
+    sr.textContent='STRIP '+r.toFixed(1)+' NM';
+    sr.style.color=r<5?'#ff4d4d':r<9?'#ffce4d':'#c3b5f0';
+  }else sr.textContent='';
   panels();renderRequests();requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
@@ -1430,7 +1674,15 @@ vb.onclick=()=>{voiceOn=!voiceOn;vb.textContent=voiceOn?'🔊 VOICE ON':'🔇 VO
   if(!voiceOn)speechSynthesis.cancel();};
 const helpBtn=document.getElementById('helpbtn'),helpPanel=document.getElementById('help-panel');
 const toggleHelp=show=>{helpPanel.style.display=show?'block':'none';helpBtn.classList.toggle('on',show);};
-helpBtn.onclick=()=>toggleHelp(helpPanel.style.display!=='block');
+helpBtn.onclick=()=>{
+  // Re-open the full briefing once the mission is under way; the READY button
+  // just closes it again rather than restarting anything.
+  if(mission==='running'){
+    document.getElementById('brief-go').textContent='◉ BACK TO THE SCOPE';
+    briefEl.style.display='flex';return;
+  }
+  toggleHelp(helpPanel.style.display!=='block');
+};
 document.getElementById('help-close').onclick=()=>toggleHelp(false);
 addEventListener('keydown',e=>{
   if(e.code==='Space'){e.preventDefault();pb.click();}
@@ -1446,6 +1698,23 @@ addEventListener('pointerup',()=>{if(listening)stopListening();});
 pttBtn.addEventListener('contextmenu',e=>e.preventDefault());
 
 /* Ambient frequency chatter. */
+/* Nellis divert order - the win condition. Only offered once the fighters are
+   actually in formation, because nothing else can turn him. */
+const divertBtn=document.getElementById('divertbtn');
+divertBtn.onclick=()=>nellisDivert();
+
+/* ---- briefing / mission flow ---- */
+const briefEl=document.getElementById('brief');
+document.getElementById('brief-go').onclick=()=>{
+  briefEl.style.display='none';
+  mission='running';paused=false;
+  last=performance.now();               // don't bank the time spent reading
+  try{const a=RADIO.getCtx();if(a.state==='suspended')a.resume();
+    if(chatterOn&&RADIO.isReady()&&!RADIO.isAmbientOn())RADIO.startAmbient();}catch(e){}
+  log('sys','▸ Position relieved. You have the sector.');
+};
+document.getElementById('outcome-again').onclick=()=>location.reload();
+
 const chBtn=document.getElementById('chatter');
 let chatterOn=true;
 chBtn.onclick=()=>{
